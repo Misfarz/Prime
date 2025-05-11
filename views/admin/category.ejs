@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Categories – Prime.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .sidebar-link.active {
+        background-color: #f3f4f6;
+        border-right: 3px solid #000;
+      }
+      .sidebar-link:hover:not(.active) {
+        background-color: #f9fafb;
+      }
+      .cropper-container {
+        max-width: 100%;
+        max-height: 200px;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+    <!-- Main Layout -->
+    <div class="flex flex-1">
+      <!-- Sidebar -->
+        <%- include("../../views/partials/admin/_sidebar") %>
+
+      <!-- Main Content Area -->
+      <div class="flex-1 flex flex-col">
+        
+        <header class="bg-white border-b border-gray-100 p-4">
+          <h1 class="text-xl font-semibold">Categories</h1>
+        </header>
+
+        <!-- Categories Content -->
+        <main class="flex-1 p-6 bg-gray-50">
+          <div class="bg-white p-4 rounded border border-gray-100 shadow-sm mb-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-sm font-semibold">Category List</h2>
+              <div class="flex space-x-4">
+                <div class="relative">
+                  <input type="text" id="search" placeholder="Search categories..."
+                    class="pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                    onkeyup="filterCategories()">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-500"></i>
+                  </div>
+                </div>
+                <button onclick="openAddCategoryModal()"
+                  class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+                  Add Category
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-xs">
+                <thead>
+                  <tr class="border-b border-gray-100">
+                    <th class="text-left py-2">Category</th>
+                    <th class="text-left py-2">Subcategories</th>
+                    <th class="text-left py-2">Description</th>
+                    <th class="text-left py-2">Image</th>
+                    <th class="text-left py-2">Status</th>
+                    <th class="text-left py-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100" id="categoryTable">
+                  <% categories.forEach(category => { %>
+                  <tr class="category-row">
+                    <td class="py-3"><%= category.name %></td>
+                    <td class="py-3"><%= category.subcategories.join(', ') || 'None' %></td>
+                    <td class="py-3"><%= category.description %></td>
+                    <td class="py-3">
+                      <img src="<%= category.image %>" alt="<%= category.name %>" class="w-12 h-12 object-cover rounded" />
+                    </td>
+                    <td class="py-3"><%= category.isListed ? 'Listed' : 'Unlisted' %></td>
+                    <td class="py-3">
+                      <div class="flex space-x-2">
+                        <% if (category.isListed) { %>
+                          <a href="/admin/unlistCategory?id=<%= category._id %>"
+                             class="text-red-500 hover:underline">Unlist</a>
+                        <% } else { %>
+                          <a href="/admin/listCategory?id=<%= category._id %>"
+                             class="text-green-500 hover:underline">List</a>
+                        <% } %>
+                        <a href="#" onclick="openEditCategoryModal('<%= category._id %>', '<%= category.name %>', '<%= category.description %>', '<%= category.subcategories.join(',') %>')"
+                           class="text-blue-500 hover:underline">Edit</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="flex justify-center">
+            <div class="flex items-center space-x-2">
+              <% for(let i=1; i <= totalPages; i++) { %>
+                <a href="?page=<%= i %>"
+                   class="px-3 py-1 rounded-lg <%= i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' %> text-sm">
+                  <%= i %>
+                </a>
+              <% } %>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Add/Edit Category Modal -->
+    <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+      <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 id="modalTitle" class="text-lg font-semibold mb-4">Add Category</h2>
+        <form id="categoryForm" enctype="multipart/form-data">
+          <input type="hidden" id="categoryId" name="categoryId">
+          <div class="mb-4">
+            <label for="name" class="block text-sm font-medium">Category Name</label>
+            <input type="text" id="name" name="name" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 text-sm">
+          </div>
+          <div class="mb-4">
+            <label for="description" class="block text-sm font-medium">Description</label>
+            <textarea id="description" name="description" required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 text-sm"></textarea>
+          </div>
+          <div class="mb-4">
+            <label for="subcategories" class="block text-sm font-medium">Subcategories (comma-separated)</label>
+            <input type="text" id="subcategories" name="subcategories"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 text-sm">
+          </div>
+          <div class="mb-4">
+            <label for="image" class="block text-sm font-medium">Category Image</label>
+            <input type="file" id="image" name="image" accept="image/*" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <div id="cropperContainer" class="mt-4 hidden">
+              <img id="imagePreview" class="max-w-full h-auto" />
+              <button type="button" id="cropImage" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+                Crop Image
+              </button>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button type="button" onclick="closeCategoryModal()"
+                    class="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-gray-300">
+              Cancel
+            </button>
+            <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+      // Sidebar active link functionality
+      document.addEventListener('DOMContentLoaded', function() {
+        const links = document.querySelectorAll('.sidebar-link');
+        links.forEach(link => {
+          link.addEventListener('click', function(e) {
+            links.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+          });
+        });
+      });
+
+      // Search filter functionality
+      function filterCategories() {
+        let input = document.getElementById("search").value.toLowerCase();
+        let rows = document.querySelectorAll(".category-row");
+
+        rows.forEach(row => {
+          let name = row.querySelector("td:nth-child(1)").textContent.toLowerCase();
+          let subcategories = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+          let description = row.querySelector("td:nth-child(3)").textContent.toLowerCase();
+
+          if (name.includes(input) || subcategories.includes(input) || description.includes(input)) {
+            row.style.display = "table-row";
+          } else {
+            row.style.display = "none";
+          }
+        });
+      }
+
+      // Modal handling
+      let cropper;
+      function openAddCategoryModal() {
+        document.getElementById('modalTitle').textContent = 'Add Category';
+        document.getElementById('categoryForm').reset();
+        document.getElementById('categoryId').value = '';
+        document.getElementById('image').required = true;
+        document.getElementById('categoryModal').classList.remove('hidden');
+        if (cropper) cropper.destroy();
+        document.getElementById('cropperContainer').classList.add('hidden');
+      }
+
+      function openEditCategoryModal(id, name, description, subcategories) {
+        document.getElementById('modalTitle').textContent = 'Edit Category';
+        document.getElementById('categoryId').value = id;
+        document.getElementById('name').value = name;
+        document.getElementById('description').value = description;
+        document.getElementById('subcategories').value = subcategories;
+        document.getElementById('image').required = false;
+        document.getElementById('categoryModal').classList.remove('hidden');
+        if (cropper) cropper.destroy();
+        document.getElementById('cropperContainer').classList.add('hidden');
+      }
+
+      function closeCategoryModal() {
+        document.getElementById('categoryModal').classList.add('hidden');
+        if (cropper) cropper.destroy();
+        document.getElementById('cropperContainer').classList.add('hidden');
+      }
+
+      // Image cropper
+      const imageInput = document.getElementById('image');
+      const imagePreview = document.getElementById('imagePreview');
+      const cropImageBtn = document.getElementById('cropImage');
+      let croppedBlob = null;
+
+      imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            imagePreview.src = event.target.result;
+            document.getElementById('cropperContainer').classList.remove('hidden');
+            if (cropper) cropper.destroy();
+            cropper = new Cropper(imagePreview, {
+              aspectRatio: 1,
+              viewMode: 1,
+              autoCropArea: 0.8,
+              responsive: true,
+            });
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      cropImageBtn.addEventListener('click', function() {
+        if (cropper) {
+          cropper.getCroppedCanvas().toBlob(blob => {
+            croppedBlob = blob;
+            cropper.destroy();
+            document.getElementById('cropperContainer').classList.add('hidden');
+            imagePreview.src = URL.createObjectURL(blob);
+          }, 'image/jpeg', 0.8);
+        }
+      });
+
+      // Form submission
+      document.getElementById('categoryForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('categoryId', document.getElementById('categoryId').value);
+        formData.append('name', document.getElementById('name').value);
+        formData.append('description', document.getElementById('description').value);
+        formData.append('subcategories', document.getElementById('subcategories').value);
+        if (croppedBlob) {
+          formData.append('image', croppedBlob, 'category.jpg');
+        } else if (imageInput.files[0]) {
+          formData.append('image', imageInput.files[0]);
+        }
+
+        try {
+          const response = await fetch('/admin/saveCategory', {
+            method: 'POST',
+            body: formData,
+          });
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert('Error saving category');
+          }
+        } catch (error) {
+          alert('Error: ' + error.message);
+        }
+      });
+    </script>
+  </body>
+</html>

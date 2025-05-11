@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prime Jersey Store - Premium Sports Jerseys</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      scroll-behavior: smooth;
+    }
+    .hero-bg {
+      background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+                  url('/images/cover.webp') center/cover no-repeat;
+    }
+    .nav-link {
+      position: relative;
+      padding-bottom: 2px;
+    }
+    .nav-link:after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: 0;
+      left: 0;
+      background-color: #2563eb;
+      transition: width 0.3s ease;
+    }
+    .nav-link:hover:after {
+      width: 100%;
+    }
+    .product-card {
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+    }
+    .sale-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background-color: #ef4444;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .testimonial-card {
+      transition: all 0.3s ease;
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    }
+    .testimonial-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+    .newsletter-input:focus {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <%- include("../../views/partials/user/header") %>
+
+
+  <section class="hero-bg h-[90vh] flex items-center text-white">
+    <div class="max-w-7xl mx-auto px-6 py-10 w-full">
+    </div>
+  </section>
+
+
+  <section id="featured" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl font-bold mb-4">Featured Jerseys</h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">Discover our most popular authentic jerseys worn by professional athletes</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 mb-16">
+        <% if (featuredProducts && featuredProducts.length > 0) { %>
+          <% featuredProducts.forEach(product => { %>
+            <a href="/product/<%= product._id %>" class="group">
+              <div class="product-card bg-white rounded-xl overflow-hidden shadow-md h-full flex flex-col border border-gray-100 relative">
+                <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                  <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
+                <% } %>
+                <div class="overflow-hidden relative pt-[100%]">
+                  <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>"
+                       class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                </div>
+                <div class="p-6 flex-grow flex flex-col">
+                  <div class="flex-grow">
+                    <h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition mb-2"><%= product.productName %></h3>
+                    <p class="text-gray-600 mb-4 line-clamp-2"><%= product.description %></p>
+                  </div>
+                  <div>
+                    <div class="flex justify-between items-center">
+                      <div>
+                        <span class="text-xl font-bold text-gray-900">
+                          $<%= product.salePrice || product.regularPrice %>
+                        </span>
+                        <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                          <span class="text-sm text-gray-500 line-through ml-2">$<%= product.regularPrice %></span>
+                        <% } %>
+                      </div>
+                      <% 
+                        let totalStock = 0;
+                        if (product.sizes && product.sizes.length > 0) {
+                          product.sizes.forEach(size => {
+                            totalStock += size.quantity || 0;
+                          });
+                        }
+                      %>
+                      <% if (totalStock > 0) { %>
+                        <span class="text-xs bg-green-100 text-green-800 px-3 py-1.5 rounded-full flex items-center">
+                          <i class="fas fa-check-circle mr-1"></i> In Stock
+                        </span>
+                      <% } else { %>
+                        <span class="text-xs bg-red-100 text-red-800 px-3 py-1.5 rounded-full flex items-center">
+                          <i class="fas fa-times-circle mr-1"></i> Sold Out
+                        </span>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a>
+          <% }); %>
+        <% } else { %>
+          <div class="col-span-full text-center py-10">
+            <p class="text-gray-500 text-lg">No featured products available at the moment. Check back soon!</p>
+          </div>
+        <% } %>
+      </div>
+
+
+    </div>
+  </section>
+
+  <section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl font-bold mb-4">Why Prime Jersey Store?</h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">We deliver authentic sports apparel with unmatched quality</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div class="bg-white p-8 rounded-xl shadow-sm text-center">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-award text-blue-600 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">Authentic Quality</h3>
+          <p class="text-gray-600">100% officially licensed merchandise with exact player specifications and team details.</p>
+        </div>
+        
+        <div class="bg-white p-8 rounded-xl shadow-sm text-center">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-truck text-green-600 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">Fast Shipping</h3>
+          <p class="text-gray-600">Get your jersey in 2-3 business days with our premium express shipping options.</p>
+        </div>
+        
+        <div class="bg-white p-8 rounded-xl shadow-sm text-center">
+          <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-exchange-alt text-purple-600 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-3">Easy Returns</h3>
+          <p class="text-gray-600">30-day hassle-free returns if you're not completely satisfied with your purchase.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <%- include("../../views/partials/user/footer") %>
+
+  <script>
+    // Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+          behavior: 'smooth'
+        });
+      });
+    });
+
+    // Animate elements when they come into view
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-fadeIn');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.product-card, .testimonial-card').forEach(card => {
+      observer.observe(card);
+    });
+  </script>
+</body>
+</html>

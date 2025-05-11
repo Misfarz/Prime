@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify Email</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-black mb-2">Verify Your Email</h1>
+      <p class="text-gray-600">We've sent a 6-digit code to your email.</p>
+      <p id="message" class="text-sm text-red-500 mt-2"></p>
+    </div>
+
+    <form id="otpForm" class="space-y-6" action="">
+      <div class="flex justify-center gap-3">
+        <input type="text" name="digit1" maxlength="1" required class="otp-input" />
+        <input type="text" name="digit2" maxlength="1" required class="otp-input" />
+        <input type="text" name="digit3" maxlength="1" required class="otp-input" />
+        <input type="text" name="digit4" maxlength="1" required class="otp-input" />
+        <input type="text" name="digit5" maxlength="1" required class="otp-input" />
+        <input type="text" name="digit6" maxlength="1" required class="otp-input" />
+      </div>
+      <button type="submit" class="w-full py-2 px-4 bg-black text-white rounded">Verify</button>
+    </form>
+
+    <button id="resendOtp" class="mt-4 text-sm text-blue-600 hover:underline disabled:text-gray-400" disabled>Resend OTP (30s)</button>
+  </div>
+
+  <script>
+    const form = document.getElementById('otpForm');
+    const message = document.getElementById('message');
+    const inputs = document.querySelectorAll('.otp-input');
+    const resendBtn = document.getElementById('resendOtp');
+    let countdown = 30;
+    let timer;
+
+    // Autofocus & backspace support
+    inputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        if (e.target.value.length === 1 && index < inputs.length - 1) {
+          inputs[index + 1].focus();
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && input.value === '' && index > 0) {
+          inputs[index - 1].focus();
+        }
+      });
+    });
+
+    // Allow Enter key to submit
+    form.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const data = {};
+      if (Object.values(data).some(val => val.trim() === '')) {
+       message.textContent = 'Please fill in all OTP digits.';
+       return;
+      }
+      formData.forEach((value, key) => (data[key] = value.trim()));
+
+      const response = await fetch('/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        window.location.href = result.redirect;
+      } else {
+        message.textContent = result.message || 'Invalid OTP';
+      }
+    });
+
+    // Resend OTP
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.disabled = true;
+      clearInterval(timer);
+      enableInputs(); // re-enable inputs
+      startCountdown();
+
+      const res = await fetch('/resend-otp', { method: 'POST' });
+      const result = await res.json();
+      message.textContent = result.message;
+    });
+
+    // Countdown and disable logic
+    function startCountdown() {
+      countdown = 30;
+      resendBtn.textContent = `Resend OTP (${countdown}s)`;
+
+      timer = setInterval(() => {
+        countdown--;
+        resendBtn.textContent = `Resend OTP (${countdown}s)`;
+        if (countdown <= 0) {
+          clearInterval(timer);
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Resend OTP';
+          disableInputs(); // Disable inputs after 30s
+        }
+      }, 1000);
+    }
+
+    function disableInputs() {
+      inputs.forEach(input => {
+        input.disabled = true;
+        input.classList.add('bg-gray-200', 'cursor-not-allowed');
+      });
+    }
+
+    function enableInputs() {
+      inputs.forEach(input => {
+        input.disabled = false;
+        input.value = '';
+        input.classList.remove('bg-gray-200', 'cursor-not-allowed');
+      });
+      inputs[0].focus();
+    }
+
+    // Initialize on page load
+    window.onload = () => {
+      enableInputs();
+      startCountdown();
+    };
+  </script>
+
+  <style>
+    .otp-input {
+      width: 3rem;
+      height: 3rem;
+      text-align: center;
+      font-size: 1.25rem;
+      border: 2px solid black;
+      border-radius: 0.375rem;
+    }
+    .otp-input:focus {
+      outline: none;
+      border-color: black;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+    }
+    button:disabled {
+      cursor: not-allowed;
+    }
+  </style>
+</body>
+</html>

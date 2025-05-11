@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Products – Prime.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      .product-table-container {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+      }
+      .product-table {
+        min-width: 100%;
+      }
+      .product-modal-content {
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      .size-field {
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .size-field:last-child {
+        margin-bottom: 0;
+      }
+      .image-preview {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        margin-right: 0.5rem;
+      }
+      .image-preview-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+      .image-preview-remove {
+        position: absolute;
+        top: -0.5rem;
+        right: -0.5rem;
+        background: #fff;
+        border-radius: 50%;
+        padding: 0.25rem;
+        cursor: pointer;
+      }
+      #cropperContainer {
+        width: 100%;
+        max-width: 600px;
+        margin: 1rem 0;
+        overflow: visible;
+        position: relative;
+        z-index: 10;
+      }
+      #cropperContainer:not(.hidden) {
+        display: block !important;
+      }
+      #imagePreview {
+        max-width: 100%;
+        max-height: 400px;
+        display: block;
+      }
+      .cropper-container {
+        z-index: 10 !important;
+      }
+      .cropper-crop-box, .cropper-view-box {
+        border-radius: 0;
+      }
+      .cropper-face {
+        background-color: rgba(0, 123, 255, 0.1);
+      }
+      /* Make buttons more visible */
+      #cropImage, #cancelCrop {
+        z-index: 20;
+        position: relative;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+    <div class="flex flex-1">
+      <%- include("../../views/partials/admin/_sidebar") %>
+      <div class="flex-1 flex flex-col">
+        <header class="bg-white border-b border-gray-100 p-4">
+          <h1 class="text-xl font-semibold">Products</h1>
+        </header>
+        <main class="flex-1 p-6 bg-gray-50 ml-0 transition-all duration-200">
+          <div class="bg-white p-6 rounded-lg border border-gray-100 shadow-sm mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <h2 class="text-lg font-semibold">Product List</h2>
+              <div class="flex flex-col md:flex-row w-full md:w-auto gap-4">
+                <div class="relative w-full md:w-64">
+                  <input type="text" id="search" placeholder="Search products..."
+                    class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm w-full"
+                    onkeyup="filterProducts()">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-500"></i>
+                  </div>
+                </div>
+                <button onclick="openAddProductModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 btn-primary whitespace-nowrap">
+                  <i class="fas fa-plus mr-2"></i>Add Product
+                </button>
+              </div>
+            </div>
+            
+            <div class="product-table-container">
+              <table class="product-table w-full text-sm">
+                <thead>
+                  <tr class="border-b border-gray-200 bg-gray-50">
+                    <th class="text-left py-3 px-4 font-medium">Product</th>
+                    <th class="text-left py-3 px-4 font-medium">Image</th>
+                    <th class="text-left py-3 px-4 font-medium">Stock</th>
+                    <th class="text-left py-3 px-4 font-medium">Price</th>
+                    <th class="text-left py-3 px-4 font-medium">Category</th>
+                    <th class="text-left py-3 px-4 font-medium">Sizes</th>
+                    <th class="text-left py-3 px-4 font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="productTable">
+                  <% products.forEach(product => { %>
+                  <tr class="product-row hover:bg-gray-50">
+                    <td class="py-4 px-4"><%= product.productName %></td>
+                    <td class="py-4 px-4">
+                      <% if (product.productImage && product.productImage.length > 0 && product.productImage[0]) { %>
+                        <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>" class="w-12 h-12 object-cover rounded" onerror="this.src='/images/placeholder.jpg'">
+                      <% } else { %>
+                        <img src="/images/placeholder.jpg" alt="No image" class="w-12 h-12 object-cover rounded">
+                      <% } %>
+                    </td>
+                    <td class="py-4 px-4">
+                      <% let totalStock = 0; %>
+                      <% product.sizes.forEach(size => { %>
+                        <% totalStock += size.quantity; %>
+                      <% }); %>
+                      <%= totalStock %>
+                    </td>
+                    <td class="py-4 px-4">
+                      <%= product.salePrice || product.regularPrice %>
+                    </td>
+                    <td class="py-4 px-4"><%= product.category.name %></td>
+                    <td class="py-4 px-4">
+                      <%= product.sizes.map(s => `${s.size}: ${s.quantity}`).join(', ') %>
+                    </td>
+                    <td class="py-4 px-4">
+                      <div class="flex space-x-3">
+                        <% if (product.isListed) { %>
+                          <a href="/admin/unlistProduct?id=<%= product._id %>" class="text-red-500 hover:text-red-700 hover:underline flex items-center">
+                            <i class="fas fa-eye-slash mr-1"></i> Unlist
+                          </a>
+                        <% } else { %>
+                          <a href="/admin/listProduct?id=<%= product._id %>" class="text-green-500 hover:text-green-700 hover:underline flex items-center">
+                            <i class="fas fa-eye mr-1"></i> List
+                          </a>
+                        <% } %>
+                        <a href="#" class="edit-product-btn text-blue-500 hover:text-blue-700 hover:underline flex items-center" data-product="<%- encodeURIComponent(JSON.stringify(product)) %>">
+                          <i class="fas fa-edit mr-1"></i> Edit
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="flex justify-center mt-6">
+            <div class="flex items-center space-x-2">
+              <% for(let i=1; i <= totalPages; i++) { %>
+                <a href="?page=<%= i %>"
+                   class="px-4 py-2 rounded-lg <%= i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300' %> text-sm transition-colors">
+                  <%= i %>
+                </a>
+              <% } %>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div id="productModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-lg p-6 w-full max-w-3xl mx-4 max-h-screen">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="modalTitle" class="text-lg font-semibold">Add Product</h2>
+          <button onclick="closeProductModal()" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="product-modal-content">
+          <form id="productForm" enctype="multipart/form-data">
+            <input type="hidden" id="productId" name="productId">
+            <div class="space-y-4">
+              <div>
+                <label for="productName" class="block text-sm font-medium mb-1">Product Name</label>
+                <input type="text" id="productName" name="productName" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
+              </div>
+              
+              <div>
+                <label for="description" class="block text-sm font-medium mb-1">Description</label>
+                <textarea id="description" name="description" required rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition"></textarea>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="category" class="block text-sm font-medium mb-1">Category</label>
+                  <select id="category" name="category" required
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
+                    <% categories.forEach(cat => { %>
+                      <option value="<%= cat._id %>" data-subcategories='<%= JSON.stringify(cat.subcategories) %>'><%= cat.name %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                
+                <div>
+                  <label for="subcategory" class="block text-sm font-medium mb-1">Subcategory</label>
+                  <select id="subcategory" name="subcategory" required
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
+                    <option value="">Select a category first</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label for="regularPrice" class="block text-sm font-medium mb-1">Regular Price</label>
+                  <input type="number" id="regularPrice" name="regularPrice" required min="0"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
+                </div>
+                <div>
+                  <label for="salePrice" class="block text-sm font-medium mb-1">Sale Price</label>
+                  <input type="number" id="salePrice" name="salePrice" min="0"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
+                </div>
+              </div>
+              
+              <div id="sizesContainer">
+                <label class="block text-sm font-medium mb-2">Sizes</label>
+                <div id="sizeFields" class="space-y-2">
+                  <% ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(size => { %>
+                    <div class="size-field flex items-center space-x-3">
+                      <label class="w-16 text-sm font-medium"><%= size %></label>
+                      <input type="number" name="sizes[<%= size %>]" min="0" value="0"
+                             class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition">
+                    </div>
+                  <% }) %>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2">Is New Product</label>
+                  <div class="flex space-x-4">
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="isNew" value="true" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                      <span class="ml-2 text-sm">Yes</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="isNew" value="false" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                      <span class="ml-2 text-sm">No</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium mb-2">Is Featured Product</label>
+                  <div class="flex space-x-4">
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="isFeatured" value="true" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                      <span class="ml-2 text-sm">Yes</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                      <input type="radio" name="isFeatured" value="false" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500">
+                      <span class="ml-2 text-sm">No</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label for="productImage" class="block text-sm font-medium mb-1">Product Images (3 required for new products)</label>
+                <input type="file" id="productImage" name="productImage" multiple accept="image/*"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition">
+                <div id="imagePreviews" class="mt-4 flex flex-wrap gap-4"></div>
+                <div id="cropperContainer" class="mt-4 hidden border-2 border-blue-300 p-4 rounded-lg bg-blue-50">
+                  <div class="mb-3 text-blue-700 font-medium">
+                    <i class="fas fa-info-circle mr-1"></i> Step 1: Adjust the crop area as needed
+                  </div>
+                  <div class="relative">
+                    <img id="imagePreview" class="max-w-full h-auto border border-gray-300" />
+                  </div>
+                  <div class="mt-6 mb-2 pt-4 border-t border-blue-200">
+                    <div class="text-blue-700 font-medium mb-2">
+                      <i class="fas fa-check-circle mr-1"></i> Step 2: Save your cropped image
+                    </div>
+                    <div class="flex space-x-3">
+                      <button type="button" id="cropImage" class="bg-green-600 text-white px-6 py-3 rounded-lg text-sm hover:bg-green-700 btn-primary font-medium flex-grow flex items-center justify-center shadow-md">
+                        <i class="fas fa-save mr-2"></i> Save Cropped Image
+                      </button>
+                      <button type="button" id="cancelCrop" class="bg-gray-500 text-white px-4 py-3 rounded-lg text-sm hover:bg-gray-600 shadow-sm">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                  <div id="cropperStatus" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button type="button" onclick="closeProductModal()"
+                      class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm hover:bg-gray-300 transition">
+                Cancel
+              </button>
+              <button type="submit" class="px-6 py-3 bg-gray-400 text-white rounded-lg text-sm hover:bg-gray-500 btn-primary font-medium" disabled>
+                <i class="fas fa-image mr-1"></i> Need 3 Images
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+      let cropper = null;
+      let croppedBlobs = [];
+      let existingImages = [];
+      let currentImageIndex = -1;
+
+      function openAddProductModal() {
+        console.log('Opening Add Product Modal');
+        try {
+          document.getElementById('modalTitle').textContent = 'Add Product';
+          document.getElementById('productForm').reset();
+          document.getElementById('productId').value = '';
+          document.getElementById('productImage').required = true;
+          document.getElementById('subcategory').innerHTML = '<option value="">Select a category first</option>';
+          document.getElementById('imagePreviews').innerHTML = '';
+          croppedBlobs = [];
+          existingImages = [];
+          document.getElementById('productModal').classList.remove('hidden');
+          if (cropper) {
+            cropper.destroy();
+            cropper = null;
+          }
+          document.getElementById('cropperContainer').classList.add('hidden');
+          document.querySelectorAll('#sizeFields input').forEach(input => input.value = '0');
+          console.log('Add Product Modal opened successfully');
+        } catch (error) {
+          console.error('Error opening add product modal:', error);
+          alert('Failed to open add product modal. Please try again.');
+        }
+      }
+
+      function openEditProductModal(product) {
+        console.log('Opening Edit Product Modal:', product);
+        try {
+          document.getElementById('modalTitle').textContent = 'Edit Product';
+          document.getElementById('productId').value = product._id || '';
+          document.getElementById('productName').value = product.productName || '';
+          document.getElementById('description').value = product.description || '';
+
+          const categoryId = product.category?._id || product.category || '';
+          document.getElementById('category').value = categoryId;
+          updateSubcategories(categoryId, product.subcategory || '');
+
+          document.getElementById('regularPrice').value = product.regularPrice || '';
+          document.getElementById('salePrice').value = product.salePrice || '';
+          document.getElementById('productImage').required = false;
+
+          // Set isNew radio buttons
+          const isNewValue = product.isNew === true;
+          document.querySelector(`input[name="isNew"][value="${isNewValue}"]`).checked = true;
+          
+          // Set isFeatured radio buttons
+          const isFeaturedValue = product.isFeatured === true;
+          document.querySelector(`input[name="isFeatured"][value="${isFeaturedValue}"]`).checked = true;
+
+          document.querySelectorAll('#sizeFields input').forEach(input => input.value = '0');
+          if (product.sizes && Array.isArray(product.sizes)) {
+            product.sizes.forEach(size => {
+              const input = document.querySelector(`input[name="sizes[${size.size}]"]`);
+              if (input) input.value = size.quantity || 0;
+            });
+          }
+
+          existingImages = product.productImage || [];
+          croppedBlobs = [];
+          updateImagePreviews();
+
+          document.getElementById('productModal').classList.remove('hidden');
+          if (cropper) {
+            cropper.destroy();
+            cropper = null;
+          }
+          document.getElementById('cropperContainer').classList.add('hidden');
+          console.log('Edit Product Modal opened successfully');
+        } catch (error) {
+          console.error('Error opening edit product modal:', error);
+          alert('Failed to open edit product modal. Please try again.');
+        }
+      }
+
+      function closeProductModal() {
+        console.log('Closing Product Modal');
+        try {
+          document.getElementById('productModal').classList.add('hidden');
+          if (cropper) {
+            cropper.destroy();
+            cropper = null;
+          }
+          document.getElementById('cropperContainer').classList.add('hidden');
+          existingImages = [];
+          croppedBlobs = [];
+          document.getElementById('imagePreviews').innerHTML = '';
+          document.getElementById('productImage').value = '';
+          console.log('Product Modal closed successfully');
+        } catch (error) {
+          console.error('Error closing product modal:', error);
+          alert('Failed to close product modal. Please try again.');
+        }
+      }
+
+      function updateSubcategories(categoryId, selectedSubcategory = null) {
+        console.log('Updating subcategories for category:', categoryId);
+        try {
+          const categorySelect = document.getElementById('category');
+          const subcategorySelect = document.getElementById('subcategory');
+          const selectedOption = Array.from(categorySelect.options).find(opt => opt.value === categoryId);
+          const subcategories = selectedOption ? JSON.parse(selectedOption.dataset.subcategories || '[]') : [];
+          subcategorySelect.innerHTML = subcategories.length
+            ? subcategories.map(sub => `<option value="${sub}" ${selectedSubcategory === sub ? 'selected' : ''}>${sub}</option>`).join('')
+            : '<option value="">No subcategories available</option>';
+          console.log('Subcategories updated:', subcategories);
+        } catch (error) {
+          console.error('Error updating subcategories:', error);
+          alert('Failed to update subcategories. Please try again.');
+        }
+      }
+
+      document.getElementById('category').addEventListener('change', function() {
+        console.log('Category changed:', this.value);
+        updateSubcategories(this.value);
+      });
+
+      const imageInput = document.getElementById('productImage');
+      const imagePreview = document.getElementById('imagePreview');
+      const cropImageBtn = document.getElementById('cropImage');
+      const cancelCropBtn = document.getElementById('cancelCrop');
+      const imagePreviews = document.getElementById('imagePreviews');
+
+      imageInput.addEventListener('change', function(e) {
+        console.log('Image input changed, files:', e.target.files);
+        const files = Array.from(e.target.files);
+        if (files.length === 0) {
+          console.log('No files selected');
+          return;
+        }
+
+        files.forEach((file, index) => {
+          if (existingImages.length + croppedBlobs.length >= 3) {
+            console.log('Image limit reached (3 images)');
+            alert('Maximum of 3 images can be uploaded.');
+            return;
+          }
+          console.log('Processing file:', file.name);
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            console.log('File read, displaying cropper');
+            currentImageIndex = croppedBlobs.length;
+            imagePreview.src = event.target.result;
+            document.getElementById('cropperContainer').classList.remove('hidden');
+            if (cropper) {
+              cropper.destroy();
+              cropper = null;
+            }
+            try {
+              cropper = new Cropper(imagePreview, {
+                aspectRatio: 1,
+                viewMode: 1,
+                autoCropArea: 0.8,
+                responsive: true,
+                minContainerWidth: 400,
+                minContainerHeight: 300,
+                cropBoxResizable: true,
+                dragMode: 'move'
+              });
+              console.log('Cropper initialized');
+            } catch (error) {
+              console.error('Error initializing Cropper:', error);
+              alert('Failed to initialize image cropper. Please try again.');
+            }
+          };
+          reader.onerror = function(error) {
+            console.error('Error reading file:', error);
+            alert('Error reading image file. Please try again.');
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      cropImageBtn.addEventListener('click', function() {
+        console.log('Confirm Crop button clicked, currentImageIndex:', currentImageIndex);
+        if (cropper && currentImageIndex >= 0) {
+        
+          this.disabled = true;
+          this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+          
+          try {
+            cropper.getCroppedCanvas({
+              width: 500,
+              height: 500,
+              imageSmoothingQuality: 'high'
+            }).toBlob(blob => {
+              console.log('Image cropped, adding to croppedBlobs');
+              croppedBlobs[currentImageIndex] = blob;
+              updateImagePreviews();
+              showCropSuccessMessage();
+              
+         
+              if (cropper) {
+                cropper.destroy();
+                cropper = null;
+              }
+              document.getElementById('cropperContainer').classList.add('hidden');
+              currentImageIndex = -1;
+              imagePreview.src = '';
+              
+          
+              this.disabled = false;
+              this.innerHTML = '<i class="fas fa-save mr-2"></i> Save Cropped Image';
+              
+            
+              checkImageRequirements();
+            }, 'image/jpeg', 0.9);
+          } catch (error) {
+            console.error('Error cropping image:', error);
+            alert('Error cropping image. Please try again.');
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-save mr-2"></i> Save Cropped Image';
+          }
+        } else {
+          console.log('Cropper not initialized or invalid index');
+          alert('Please select an image to crop.');
+        }
+      });
+
+      cancelCropBtn.addEventListener('click', function() {
+        console.log('Cancel crop button clicked');
+        if (cropper) {
+          cropper.destroy();
+          cropper = null;
+        }
+        document.getElementById('cropperContainer').classList.add('hidden');
+        currentImageIndex = -1;
+        imagePreview.src = '';
+      });
+
+      function showCropSuccessMessage() {
+        console.log('Showing crop success message');
+        const existingMessage = document.querySelector('.crop-success-message');
+        if (existingMessage) existingMessage.remove();
+        
+        // Update cropper status
+        const cropperStatus = document.getElementById('cropperStatus');
+        if (cropperStatus) {
+          cropperStatus.className = 'mt-2 text-green-600 text-sm font-medium crop-success-message';
+          cropperStatus.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Image cropped successfully! Ready for final save.';
+        }
+        
+        // Also show a prominent message outside the cropper container
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'mt-3 mb-3 bg-green-100 text-green-700 p-3 rounded-lg text-sm crop-success-message flex items-center border border-green-300';
+        messageDiv.innerHTML = '<i class="fas fa-check-circle mr-2 text-lg"></i> <span><strong>Image cropped and added!</strong> Continue adding images or click "Save Product" when all 3 images are ready.</span>';
+        document.getElementById('imagePreviews').insertAdjacentElement('beforebegin', messageDiv);
+        
+        // Update the save button to indicate it's ready
+        updateSaveButtonState();
+        
+        setTimeout(() => {
+          if (messageDiv && messageDiv.parentNode) {
+            messageDiv.remove();
+          }
+        }, 8000);
+      }
+
+      function deleteImage(index) {
+        console.log('Deleting cropped image at index:', index);
+        croppedBlobs.splice(index, 1);
+        updateImagePreviews();
+      }
+
+      function deleteExistingImage(index) {
+        console.log('Deleting existing image at index:', index);
+        existingImages.splice(index, 1);
+        updateImagePreviews();
+      }
+
+      function updateImagePreviews() {
+        console.log('Updating image previews, existingImages:', existingImages.length, 'croppedBlobs:', croppedBlobs.length);
+        const totalImages = existingImages.length + croppedBlobs.length;
+        
+        // Create a status message
+        let statusHtml = '';
+        if (totalImages < 3) {
+          statusHtml = `<div class="mt-2 mb-3 text-amber-600 font-medium">
+            <i class="fas fa-exclamation-triangle mr-1"></i> ${3 - totalImages} more image(s) required
+          </div>`;
+        } else {
+          statusHtml = `<div class="mt-2 mb-3 text-green-600 font-medium">
+            <i class="fas fa-check-circle mr-1"></i> All required images added - Ready to save!
+          </div>`;
+        }
+        
+        imagePreviews.innerHTML = statusHtml + [
+          ...existingImages.map((img, index) => `
+            <div class="relative">
+              <img src="${img}" class="image-preview rounded border border-gray-200" onerror="this.src='/images/placeholder.jpg'" />
+              <button type="button" onclick="deleteExistingImage(${index})" class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center transform translate-x-1/2 -translate-y-1/2 hover:bg-red-600 transition">×</button>
+            </div>
+          `),
+          ...croppedBlobs.map((blob, index) => `
+            <div class="relative">
+              <img src="${URL.createObjectURL(blob)}" class="image-preview rounded border border-gray-200" />
+              <button type="button" onclick="deleteImage(${index})" class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center transform translate-x-1/2 -translate-y-1/2 hover:bg-red-600 transition">×</button>
+            </div>
+          `)
+        ].join('');
+
+        document.getElementById('productImage').required = totalImages < 3 && !document.getElementById('productId').value;
+        
+        checkImageRequirements();
+      }
+
+      function checkImageRequirements() {
+        const totalImages = existingImages.length + croppedBlobs.length;
+        const saveButton = document.querySelector('#productForm button[type="submit"]');
+        
+        if (totalImages === 3) {
+          saveButton.classList.remove('bg-gray-400', 'hover:bg-gray-500');
+          saveButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+          saveButton.disabled = false;
+        } else {
+          saveButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+          saveButton.classList.add('bg-gray-400', 'hover:bg-gray-500');
+          saveButton.disabled = true;
+        }
+        
+        
+        updateSaveButtonState();
+      }
+      
+   
+      function updateSaveButtonState() {
+        const totalImages = existingImages.length + croppedBlobs.length;
+        const saveButton = document.querySelector('#productForm button[type="submit"]');
+        
+        if (totalImages === 3) {
+          saveButton.innerHTML = '<i class="fas fa-save mr-1"></i> Save Product';
+        } else {
+          saveButton.innerHTML = `<i class="fas fa-image mr-1"></i> Need ${3 - totalImages} More Image(s)`;
+        }
+      }
+      
+      document.getElementById('productForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        console.log('Form submitted');
+
+        const totalImages = existingImages.length + croppedBlobs.length;
+        console.log('Total images:', totalImages);
+        if (totalImages !== 3) {
+          alert('Please provide exactly 3 images.');
+          return;
+        }
+
+        const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(size => ({
+          size,
+          quantity: parseInt(document.querySelector(`input[name="sizes[${size}]"]`).value) || 0
+        })).filter(s => s.quantity > 0);
+
+        console.log('Sizes:', sizes);
+        if (sizes.length === 0) {
+          alert('Please provide at least one size with quantity greater than 0.');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('productId', document.getElementById('productId').value);
+        formData.append('productName', document.getElementById('productName').value);
+        formData.append('description', document.getElementById('description').value);
+        formData.append('category', document.getElementById('category').value);
+        formData.append('subcategory', document.getElementById('subcategory').value);
+        formData.append('regularPrice', document.getElementById('regularPrice').value);
+        formData.append('salePrice', document.getElementById('salePrice').value || '');
+        formData.append('status', 'Available');
+        formData.append('sizes', JSON.stringify(sizes));
+        
+        // Add isNew and isFeatured values
+        const isNewChecked = document.querySelector('input[name="isNew"]:checked').value;
+        const isFeaturedChecked = document.querySelector('input[name="isFeatured"]:checked').value;
+        formData.append('isNew', isNewChecked);
+        formData.append('isFeatured', isFeaturedChecked);
+
+        existingImages.forEach((img, index) => {
+          formData.append('existingImages', img);
+        });
+
+        croppedBlobs.forEach((blob, index) => {
+          formData.append('productImage', blob, `image${index}.jpg`);
+        });
+
+        for (let [key, value] of formData.entries()) {
+          console.log(`formData: ${key}=${value}`);
+        }
+
+        try {
+          const response = await fetch('/admin/saveProduct', {
+            method: 'POST',
+            body: formData,
+          });
+          const text = await response.text();
+          console.log('Server response:', text);
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert(text || 'Error saving product');
+          }
+        } catch (error) {
+          console.error('Form submission error:', error);
+          alert('Error: ' + error.message);
+        }
+      });
+
+      function filterProducts() {
+        console.log('Filtering products');
+        let input = document.getElementById('search').value.toLowerCase();
+        let rows = document.querySelectorAll('.product-row');
+        rows.forEach(row => {
+          let name = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+          let category = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+          if (name.includes(input) || category.includes(input)) {
+            row.style.display = 'table-row';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded');
+        try {
+          const links = document.querySelectorAll('.sidebar-link');
+          links.forEach(link => {
+            if (link.href.includes('/admin/products')) {
+              link.classList.add('active');
+            }
+            link.addEventListener('click', function(e) {
+              links.forEach(l => l.classList.remove('active'));
+              this.classList.add('active');
+            });
+          });
+          
+          // Add event listeners for edit product buttons
+          document.querySelectorAll('.edit-product-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+              e.preventDefault();
+              try {
+                const productData = JSON.parse(decodeURIComponent(this.dataset.product));
+                openEditProductModal(productData);
+              } catch (error) {
+                console.error('Error parsing product data:', error);
+                alert('Failed to open edit modal. Please try again.');
+              }
+            });
+          });
+          
+          updateSubcategories(document.getElementById('category').value);
+          
+          // Initialize the save button state
+          checkImageRequirements();
+          
+          console.log('Sidebar and initial subcategories initialized');
+        } catch (error) {
+          console.error('Error in DOMContentLoaded:', error);
+          alert('Failed to initialize page. Please refresh.');
+        }
+      });
+    </script>
+  </body>
+</html>

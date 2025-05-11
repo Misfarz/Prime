@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= product.productName %> - Prime Jersey Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      scroll-behavior: smooth;
+    }
+    .product-image-thumbnail {
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .product-image-thumbnail.active {
+      border-color: #3b82f6;
+    }
+    .product-image-thumbnail:hover {
+      transform: translateY(-2px);
+    }
+    .size-selector input[type="radio"] {
+      display: none;
+    }
+    .size-selector input[type="radio"] + label {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      transition: all 0.2s ease;
+    }
+    .size-selector input[type="radio"]:checked + label {
+      background-color: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+    .size-selector input[type="radio"]:disabled + label {
+      background-color: #f3f4f6;
+      color: #9ca3af;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .product-card {
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+    }
+    .sale-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background-color: #ef4444;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <%- include("../../views/partials/user/header") %>
+
+  <!-- Breadcrumbs -->
+  <div class="bg-white border-b">
+    <div class="max-w-7xl mx-auto px-6 py-3">
+      <div class="flex items-center text-sm text-gray-500">
+        <a href="/" class="hover:text-blue-600 transition">Home</a>
+        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+        <a href="/shopall" class="hover:text-blue-600 transition">Shop</a>
+        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+        <a href="/shopall?category=<%= product.category._id %>" class="hover:text-blue-600 transition"><%= product.category.name %></a>
+        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+        <span class="text-gray-800 font-medium"><%= product.productName %></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Detail Section -->
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Product Images -->
+        <div>
+          <div class="bg-white rounded-xl overflow-hidden shadow-sm mb-4">
+            <img id="mainProductImage" src="<%= product.productImage[0] %>" alt="<%= product.productName %>" class="w-full h-auto object-cover">
+          </div>
+          <div class="grid grid-cols-4 gap-4">
+            <% product.productImage.forEach((image, index) => { %>
+              <div class="product-image-thumbnail rounded-lg overflow-hidden <%= index === 0 ? 'active' : '' %>" onclick="changeMainImage('<%= image %>', this)">
+                <img src="<%= image %>" alt="<%= product.productName %> thumbnail" class="w-full h-24 object-cover">
+              </div>
+            <% }); %>
+          </div>
+        </div>
+
+     
+        <div>
+          <% if (product.isNew) { %>
+            <div class="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold mb-3">
+              <i class="fas fa-bolt mr-1"></i> New Arrival
+            </div>
+          <% } %>
+          <% if (product.isFeatured) { %>
+            <div class="inline-block bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold mb-3 ml-2">
+              <i class="fas fa-star mr-1"></i> Featured
+            </div>
+          <% } %>
+          
+          <h1 class="text-3xl font-bold mb-2"><%= product.productName %></h1>
+          
+          <div class="flex items-center mb-4">
+            <div class="text-yellow-400 flex items-center">
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star-half-alt"></i>
+            </div>
+            <span class="text-gray-500 ml-2 text-sm">4.5 (24 reviews)</span>
+          </div>
+          
+          <div class="mb-6">
+            <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+              <div class="flex items-center">
+                <span class="text-3xl font-bold text-gray-900">$<%= product.salePrice %></span>
+                <span class="text-lg text-gray-500 line-through ml-3">$<%= product.regularPrice %></span>
+                <span class="ml-3 bg-red-100 text-red-800 px-2 py-1 rounded-md text-sm font-medium">
+                  <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>% OFF
+                </span>
+              </div>
+            <% } else { %>
+              <span class="text-3xl font-bold text-gray-900">$<%= product.regularPrice %></span>
+            <% } %>
+          </div>
+          
+          
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3">Select Size</h3>
+            <form id="addToCartForm" class="size-selector grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <% ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(sizeOption => { %>
+                <% 
+                  const sizeObj = product.sizes.find(s => s.size === sizeOption);
+                  const quantity = sizeObj ? sizeObj.quantity : 0;
+                  const isAvailable = quantity > 0;
+                %>
+                <div>
+                  <input 
+                    type="radio" 
+                    name="size" 
+                    id="size-<%= sizeOption %>" 
+                    value="<%= sizeOption %>" 
+                    <%= !isAvailable ? 'disabled' : '' %>
+                    <%= (isAvailable && sizeOption === 'M') ? 'checked' : '' %>
+                  >
+                  <label for="size-<%= sizeOption %>" class="text-center block w-full">
+                    <%= sizeOption %>
+                    <% if (isAvailable) { %>
+                      <span class="block text-xs text-gray-500 mt-1"><%= quantity %> left</span>
+                    <% } %>
+                  </label>
+                </div>
+              <% }); %>
+            </form>
+          </div>
+          
+          <div class="mb-8">
+            <h3 class="text-lg font-semibold mb-3">Quantity</h3>
+            <div class="flex items-center">
+              <button id="decreaseQuantity" class="bg-gray-200 px-3 py-2 rounded-l-lg hover:bg-gray-300 transition">
+                <i class="fas fa-minus"></i>
+              </button>
+              <input type="number" id="quantity" min="1" max="10" value="1" class="w-16 text-center py-2 border-y border-gray-200 focus:outline-none">
+              <button id="increaseQuantity" class="bg-gray-200 px-3 py-2 rounded-r-lg hover:bg-gray-300 transition">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button id="addToCartBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center">
+              <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
+            </button>
+            <button id="buyNowBtn" class="flex-1 bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center">
+              <i class="fas fa-bolt mr-2"></i> Buy Now
+            </button>
+          </div>
+          
+          <div class="mt-8 border-t border-gray-200 pt-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="flex items-center">
+                <i class="fas fa-truck text-blue-600 text-xl mr-3"></i>
+                <div>
+                  <h4 class="font-medium">Free Shipping</h4>
+                  <p class="text-sm text-gray-500">On orders over $50</p>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <i class="fas fa-exchange-alt text-blue-600 text-xl mr-3"></i>
+                <div>
+                  <h4 class="font-medium">Easy Returns</h4>
+                  <p class="text-sm text-gray-500">30-day return policy</p>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <i class="fas fa-shield-alt text-blue-600 text-xl mr-3"></i>
+                <div>
+                  <h4 class="font-medium">Secure Checkout</h4>
+                  <p class="text-sm text-gray-500">100% protected payments</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product Details Tabs -->
+  <section class="py-12 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="border-b border-gray-200 mb-8">
+        <div class="flex flex-wrap -mb-px">
+          <button class="tab-btn active inline-block p-4 border-b-2 border-blue-600 font-medium text-blue-600" data-tab="details">
+            Product Details
+          </button>
+          <button class="tab-btn inline-block p-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="reviews">
+            Reviews
+          </button>
+          <button class="tab-btn inline-block p-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="shipping">
+            Shipping & Returns
+          </button>
+        </div>
+      </div>
+      
+      <div id="details" class="tab-content active">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Product Specifications</h3>
+            <table class="w-full text-left">
+              <tbody>
+                <tr class="border-b border-gray-200">
+                  <th class="py-3 pr-4 font-medium text-gray-900">Category</th>
+                  <td class="py-3"><%= product.category.name %></td>
+                </tr>
+                <tr class="border-b border-gray-200">
+                  <th class="py-3 pr-4 font-medium text-gray-900">Subcategory</th>
+                  <td class="py-3"><%= product.subcategory %></td>
+                </tr>
+                <tr class="border-b border-gray-200">
+                  <th class="py-3 pr-4 font-medium text-gray-900">Material</th>
+                  <td class="py-3">100% Polyester</td>
+                </tr>
+                <tr class="border-b border-gray-200">
+                  <th class="py-3 pr-4 font-medium text-gray-900">Care</th>
+                  <td class="py-3">Machine wash cold, tumble dry low</td>
+                </tr>
+                <tr class="border-b border-gray-200">
+                  <th class="py-3 pr-4 font-medium text-gray-900">Available Sizes</th>
+                  <td class="py-3">
+                    <% 
+                      const availableSizes = product.sizes
+                        .filter(s => s.quantity > 0)
+                        .map(s => s.size)
+                        .join(', ');
+                    %>
+                    <%= availableSizes || 'Currently out of stock' %>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Product Description</h3>
+            <p class="text-gray-700 leading-relaxed mb-4"><%= product.description %></p>
+        </div>
+      </div>
+ 
+      
+     
+
+  <!-- Related Products -->
+  <section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-6">
+      <h2 class="text-2xl font-bold mb-8">You May Also Like</h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <% relatedProducts.forEach(relatedProduct => { %>
+          <a href="/product/<%= relatedProduct._id %>" class="group">
+            <div class="product-card bg-white rounded-xl overflow-hidden shadow-md h-full flex flex-col border border-gray-100">
+              <% if (relatedProduct.isNew) { %>
+                <div class="absolute top-4 left-4 z-10">
+                  <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
+                    <i class="fas fa-bolt mr-1"></i> New
+                  </span>
+                </div>
+              <% } %>
+              <% if (relatedProduct.salePrice && relatedProduct.salePrice < relatedProduct.regularPrice) { %>
+                <div class="sale-badge">SAVE <%= Math.round((1 - relatedProduct.salePrice/relatedProduct.regularPrice)*100) %>%</div>
+              <% } %>
+              <div class="overflow-hidden relative pt-[100%]">
+                <img src="<%= relatedProduct.productImage[0] %>" alt="<%= relatedProduct.productName %>"
+                     class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+              </div>
+              <div class="p-6 flex-grow flex flex-col">
+                <div class="flex-grow">
+                  <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2"><%= relatedProduct.productName %></h3>
+                  <p class="text-gray-600 mb-4 line-clamp-2"><%= relatedProduct.description %></p>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <span class="text-lg font-bold text-gray-900">
+                        $<%= relatedProduct.salePrice || relatedProduct.regularPrice %>
+                      </span>
+                      <% if (relatedProduct.salePrice && relatedProduct.salePrice < relatedProduct.regularPrice) { %>
+                        <span class="text-sm text-gray-500 line-through ml-2">$<%= relatedProduct.regularPrice %></span>
+                      <% } %>
+                    </div>
+                    <% 
+                      let relatedTotalStock = 0;
+                      if (relatedProduct.sizes && relatedProduct.sizes.length > 0) {
+                        relatedProduct.sizes.forEach(size => {
+                          relatedTotalStock += size.quantity || 0;
+                        });
+                      }
+                    %>
+                    <% if (relatedTotalStock > 0) { %>
+                      <span class="text-xs bg-green-100 text-green-800 px-3 py-1.5 rounded-full flex items-center">
+                        <i class="fas fa-check-circle mr-1"></i> In Stock
+                      </span>
+                    <% } else { %>
+                      <span class="text-xs bg-red-100 text-red-800 px-3 py-1.5 rounded-full flex items-center">
+                        <i class="fas fa-times-circle mr-1"></i> Sold Out
+                      </span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+
+  <%- include("../../views/partials/user/footer") %>
+
+  <script>
+    // Image gallery functionality
+    function changeMainImage(imageSrc, thumbnail) {
+      document.getElementById('mainProductImage').src = imageSrc;
+      
+      // Update active thumbnail
+      document.querySelectorAll('.product-image-thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+      });
+      thumbnail.classList.add('active');
+    }
+    
+    // Quantity control
+    document.getElementById('decreaseQuantity').addEventListener('click', function() {
+      const quantityInput = document.getElementById('quantity');
+      const currentValue = parseInt(quantityInput.value);
+      if (currentValue > 1) {
+        quantityInput.value = currentValue - 1;
+      }
+    });
+    
+    document.getElementById('increaseQuantity').addEventListener('click', function() {
+      const quantityInput = document.getElementById('quantity');
+      const currentValue = parseInt(quantityInput.value);
+      const maxValue = parseInt(quantityInput.getAttribute('max'));
+      if (currentValue < maxValue) {
+        quantityInput.value = currentValue + 1;
+      }
+    });
+    
+    // Tab functionality
+    document.querySelectorAll('.tab-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const tabId = this.getAttribute('data-tab');
+        
+        // Update active tab button
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
+          btn.classList.add('border-transparent', 'text-gray-500');
+        });
+        this.classList.add('active', 'border-blue-600', 'text-blue-600');
+        this.classList.remove('border-transparent', 'text-gray-500');
+        
+        // Show active tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+        document.getElementById(tabId).classList.remove('hidden');
+      });
+    });
+    
+    // Add to cart functionality
+    document.getElementById('addToCartBtn').addEventListener('click', function() {
+      const selectedSize = document.querySelector('input[name="size"]:checked');
+      const quantity = document.getElementById('quantity').value;
+      
+      if (!selectedSize) {
+        alert('Please select a size');
+        return;
+      }
+      
+      alert(`Added ${quantity} item(s) of size ${selectedSize.value} to cart!`);
+      // Here you would normally send this data to your cart API
+    });
+    
+    // Buy now functionality
+    document.getElementById('buyNowBtn').addEventListener('click', function() {
+      const selectedSize = document.querySelector('input[name="size"]:checked');
+      const quantity = document.getElementById('quantity').value;
+      
+      if (!selectedSize) {
+        alert('Please select a size');
+        return;
+      }
+      
+      alert(`Proceeding to checkout with ${quantity} item(s) of size ${selectedSize.value}!`);
+      // Here you would normally redirect to checkout page
+    });
+  </script>
+</body>
+</html>

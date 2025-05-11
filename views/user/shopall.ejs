@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prime. Shop All</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      scroll-behavior: smooth;
+    }
+    .product-card {
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+    }
+    .sale-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background-color: #ef4444;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .new-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background-color: #3b82f6;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <%- include("../../views/partials/user/header") %>
+
+  <!-- Page Header -->
+  <div class="bg-white border-b">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center text-sm text-gray-500">
+        <a href="/" class="hover:text-blue-600 transition">Home</a>
+        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+        <span class="text-gray-800 font-medium">Shop All</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <section id="shop-all" class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-6">
+      
+      <div class="mb-12">
+        <h1 class="text-4xl font-bold mb-8">Shop All Products</h1>
+        
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+         
+            <form action="/shopall" method="GET" class="relative w-full lg:w-96">
+              <input 
+                type="text" 
+                name="search" 
+                placeholder="Search for jerseys, teams, players..." 
+                value="<%= search || '' %>" 
+                class="pl-12 pr-4 py-3 w-full rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+              >
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+              </div>
+              <!-- Preserve sort parameter if it exists -->
+              <% if (sort) { %>
+                <input type="hidden" name="sort" value="<%= sort %>">
+              <% } %>
+              <button type="submit" class="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-600 hover:text-blue-800 transition">
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </form>
+            
+       
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+             
+              <div class="flex items-center space-x-3 w-full sm:w-auto">
+                <label for="sort" class="text-sm font-medium text-gray-700 whitespace-nowrap">Sort by:</label>
+                <select 
+                  name="sort" 
+                  id="sort" 
+                  onchange="updateSort(this.value)" 
+                  class="px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full sm:w-auto shadow-sm"
+                >
+                  <option value="low-to-high" <%= sort === 'low-to-high' ? 'selected' : '' %>>Price: Low to High</option>
+                  <option value="high-to-low" <%= sort === 'high-to-low' ? 'selected' : '' %>>Price: High to Low</option>
+                  <option value="alphabetical-asc" <%= sort === 'alphabetical-asc' ? 'selected' : '' %>>A - Z</option>
+                  <option value="alphabetical-desc" <%= sort === 'alphabetical-desc' ? 'selected' : '' %>>Z - A</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    
+      <% if (typeof searchMessage !== 'undefined' && searchMessage) { %>
+        <div class="mb-8 <%= products.length === 0 ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700' %> p-4 rounded-lg shadow-sm border <%= products.length === 0 ? 'border-red-100' : 'border-blue-100' %>">
+          <div class="flex items-center">
+            <% if (products.length === 0) { %>
+              <i class="fas fa-exclamation-circle text-red-500 mr-3 text-xl"></i>
+            <% } else { %>
+              <i class="fas fa-info-circle text-blue-500 mr-3 text-xl"></i>
+            <% } %>
+            <p class="font-medium"><%= searchMessage %></p>
+          </div>
+          <% if (products.length === 0) { %>
+            <div class="mt-2 ml-7">
+              <a href="/shopall" class="text-red-700 underline font-medium hover:text-red-800 transition">View all products</a>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <% products.forEach(product => { %>
+          <a href="/product/<%= product._id %>" class="group">
+            <div class="product-card bg-white rounded-xl overflow-hidden shadow-md h-full flex flex-col border border-gray-100">
+              <% if (product.isNew) { %>
+                <div class="new-badge">
+                  <i class="fas fa-bolt mr-1"></i> NEW
+                </div>
+              <% } %>
+              <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
+              <% } %>
+              <div class="overflow-hidden relative pt-[100%]">
+                <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>"
+                     class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+              </div>
+              <div class="p-6 flex-grow flex flex-col">
+                <div class="flex-grow">
+                  <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2"><%= product.productName %></h3>
+                  <p class="text-gray-600 mb-4 line-clamp-2"><%= product.description %></p>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <span class="text-lg font-bold text-gray-900">
+                        $<%= product.salePrice || product.regularPrice %>
+                      </span>
+                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                        <span class="text-sm text-gray-500 line-through ml-2">$<%= product.regularPrice %></span>
+                      <% } %>
+                    </div>
+                    <% 
+                      let totalStock = 0;
+                      if (product.sizes && product.sizes.length > 0) {
+                        product.sizes.forEach(size => {
+                          totalStock += size.quantity || 0;
+                        });
+                      }
+                    %>
+                    <% if (totalStock > 0) { %>
+                      <span class="text-xs bg-green-100 text-green-800 px-3 py-1.5 rounded-full flex items-center">
+                        <i class="fas fa-check-circle mr-1"></i> In Stock
+                      </span>
+                    <% } else { %>
+                      <span class="text-xs bg-red-100 text-red-800 px-3 py-1.5 rounded-full flex items-center">
+                        <i class="fas fa-times-circle mr-1"></i> Sold Out
+                      </span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+      
+    
+      <% if (totalPages > 1) { %>
+      <div class="mt-16 flex justify-center">
+        <div class="inline-flex rounded-md shadow-sm">
+          <% if (currentPage > 1) { %>
+            <a href="/shopall?page=<%= currentPage - 1 %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %>" 
+               class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <i class="fas fa-chevron-left mr-1"></i> Previous
+            </a>
+          <% } else { %>
+            <span class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-50 border border-gray-300 rounded-l-md cursor-not-allowed">
+              <i class="fas fa-chevron-left mr-1"></i> Previous
+            </span>
+          <% } %>
+          
+          <% for(let i = 1; i <= totalPages; i++) { %>
+            <% if (i === currentPage) { %>
+              <span class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <%= i %>
+              </span>
+            <% } else { %>
+              <a href="/shopall?page=<%= i %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %>" 
+                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <%= i %>
+              </a>
+            <% } %>
+          <% } %>
+          
+          <% if (currentPage < totalPages) { %>
+            <a href="/shopall?page=<%= currentPage + 1 %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %>" 
+               class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              Next <i class="fas fa-chevron-right ml-1"></i>
+            </a>
+          <% } else { %>
+            <span class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-50 border border-gray-300 rounded-r-md cursor-not-allowed">
+              Next <i class="fas fa-chevron-right ml-1"></i>
+            </span>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  
+  <%- include("../../views/partials/user/footer") %>
+
+  <script>
+    // Function to handle sorting while preserving search parameters
+    function updateSort(sortValue) {
+      // Get current URL and parameters
+      const url = new URL(window.location.href);
+      
+      // Update or add the sort parameter
+      url.searchParams.set('sort', sortValue);
+      
+      // Navigate to the new URL
+      window.location.href = url.toString();
+    }
+  </script>
+  <script>
+    // Function to update sort and maintain search parameter
+    function updateSort(sortValue) {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('sort', sortValue);
+      window.location.href = currentUrl.toString();
+    }
+    
+    // Add line-clamp functionality for product descriptions
+    document.addEventListener('DOMContentLoaded', function() {
+      const descriptions = document.querySelectorAll('.line-clamp-2');
+      descriptions.forEach(desc => {
+        if (desc.scrollHeight > desc.clientHeight) {
+          desc.classList.add('truncate-description');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

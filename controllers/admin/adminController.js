@@ -2,7 +2,7 @@ const User = require('../../models/userSchema');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 
-// Load admin login page
+
 const loadLogin = async (req, res) => {
   try {
     if (req.session.admin) {
@@ -15,7 +15,7 @@ const loadLogin = async (req, res) => {
   }
 };
 
-// Load error page
+
 const loadPageError = async (req, res) => {
   try {
     return res.render('page-error');
@@ -25,7 +25,7 @@ const loadPageError = async (req, res) => {
   }
 };
 
-// Load admin dashboard
+
 const loadDashboard = (req, res) => {
   try {
     if (req.session.admin) {
@@ -39,7 +39,6 @@ const loadDashboard = (req, res) => {
   }
 };
 
-// Admin login handler
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -64,7 +63,7 @@ const login = async (req, res) => {
   }
 };
 
-// Admin logout
+
 const logout = (req, res) => {
   req.session.destroy((err) => {
     if (err) {

@@ -85,11 +85,11 @@
       }
     });
 
-    // Resend OTP
+  
     resendBtn.addEventListener('click', async () => {
       resendBtn.disabled = true;
       clearInterval(timer);
-      enableInputs(); // re-enable inputs
+      enableInputs(); 
       startCountdown();
 
       const res = await fetch('/resend-otp', { method: 'POST' });
@@ -97,7 +97,6 @@
       message.textContent = result.message;
     });
 
-    // Countdown and disable logic
     function startCountdown() {
       countdown = 30;
       resendBtn.textContent = `Resend OTP (${countdown}s)`;
@@ -109,7 +108,7 @@
           clearInterval(timer);
           resendBtn.disabled = false;
           resendBtn.textContent = 'Resend OTP';
-          disableInputs(); // Disable inputs after 30s
+          disableInputs(); 
         }
       }, 1000);
     }
@@ -130,7 +129,6 @@
       inputs[0].focus();
     }
 
-    // Initialize on page load
     window.onload = () => {
       enableInputs();
       startCountdown();

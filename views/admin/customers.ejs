@@ -83,7 +83,6 @@
             </div>
           </div>
 
-          <!-- Pagination -->
           <div class="flex justify-center">
             <div class="flex items-center space-x-2">
               <% for(let i=1; i <= totalPages; i++) { %>
@@ -101,7 +100,7 @@
   
 
     <script>
-      // Sidebar Threads active link functionality
+   
       document.addEventListener('DOMContentLoaded', function() {
         const links = document.querySelectorAll('.sidebar-link');
         links.forEach(link => {
@@ -112,7 +111,7 @@
         });
       });
 
-      // Search filter functionality
+
       function filterCustomers() {
         let input = document.getElementById("search").value.toLowerCase();
         let rows = document.querySelectorAll(".customer-row");

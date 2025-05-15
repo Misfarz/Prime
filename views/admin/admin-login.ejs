@@ -17,7 +17,7 @@
   </head>
   <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
 
-    <!-- Header -->
+
     <header class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
       <div class="text-xl font-semibold">Prime.</div>
       <nav class="hidden md:flex space-x-6 text-xs text-gray-600">
@@ -25,7 +25,6 @@
       </nav>
     </header>
 
-    <!-- Main Content -->
     <main class="flex-grow flex items-center justify-center px-4 py-8">
       <form class="w-full max-w-sm bg-white p-8 rounded shadow border border-gray-100" action="/admin/loginaction" method="post">
         <h2 class="text-lg font-semibold mb-6 text-center">Admin Login</h2>
@@ -70,7 +69,7 @@
       </form>
     </main>
 
-    <!-- Footer -->
+
     <footer class="w-full border-t h-20 flex items-center justify-end px-6">
       <div class="text-right text-sm text-gray-600 space-y-1">
         <div class="flex flex-wrap gap-3 justify-end text-xs">
@@ -82,7 +81,7 @@
       </div>
     </footer>
 
-    <!-- Form Validation Script -->
+
     <script>
       document.getElementById('adminLoginForm').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -113,8 +112,7 @@
 
         if (isValid) {
           console.log('Form is valid. Email:', email.value);
-          // Redirect or send login request to backend
-          // window.location.href = '/admin/dashboard';
+
         }
       });
     </script>

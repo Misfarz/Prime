@@ -42,6 +42,8 @@
         object-fit: cover;
         border-radius: 0.5rem;
         margin-right: 0.5rem;
+        background-color: #f9f9f9;
+        border: 1px solid #e5e7eb;
       }
       .image-preview-container {
         display: flex;
@@ -65,6 +67,10 @@
         overflow: visible;
         position: relative;
         z-index: 10;
+        background-color: #f9f9f9;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
       }
       #cropperContainer:not(.hidden) {
         display: block !important;
@@ -221,6 +227,7 @@
                   <label for="category" class="block text-sm font-medium mb-1">Category</label>
                   <select id="category" name="category" required
                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
+                              <option value="">choose category</option>
                     <% categories.forEach(cat => { %>
                       <option value="<%= cat._id %>" data-subcategories='<%= JSON.stringify(cat.subcategories) %>'><%= cat.name %></option>
                     <% }) %>
@@ -229,7 +236,7 @@
                 
                 <div>
                   <label for="subcategory" class="block text-sm font-medium mb-1">Subcategory</label>
-                  <select id="subcategory" name="subcategory" required
+                  <select id="subcategory" name="subcategory" 
                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
                     <option value="">Select a category first</option>
                   </select>
@@ -473,40 +480,71 @@
           return;
         }
 
+        // Validate file types first
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+        if (invalidFiles.length > 0) {
+          alert('Please select only image files (JPEG, PNG, WebP, or GIF).');
+          return;
+        }
+
         files.forEach((file, index) => {
           if (existingImages.length + croppedBlobs.length >= 3) {
             console.log('Image limit reached (3 images)');
             alert('Maximum of 3 images can be uploaded.');
             return;
           }
+          
+          // Check file size (limit to 5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+            return;
+          }
+          
           console.log('Processing file:', file.name);
           const reader = new FileReader();
           reader.onload = function(event) {
             console.log('File read, displaying cropper');
             currentImageIndex = croppedBlobs.length;
-            imagePreview.src = event.target.result;
-            document.getElementById('cropperContainer').classList.remove('hidden');
-            if (cropper) {
-              cropper.destroy();
-              cropper = null;
-            }
-            try {
-              cropper = new Cropper(imagePreview, {
-                aspectRatio: 1,
-                viewMode: 1,
-                autoCropArea: 0.8,
-                responsive: true,
-                minContainerWidth: 400,
-                minContainerHeight: 300,
-                cropBoxResizable: true,
-                dragMode: 'move'
-              });
-              console.log('Cropper initialized');
-            } catch (error) {
-              console.error('Error initializing Cropper:', error);
-              alert('Failed to initialize image cropper. Please try again.');
-            }
+            
+            // Create a new image to check dimensions before initializing cropper
+            const img = new Image();
+            img.onload = function() {
+              // Clear previous image preview
+              imagePreview.src = event.target.result;
+              document.getElementById('cropperContainer').classList.remove('hidden');
+              if (cropper) {
+                cropper.destroy();
+                cropper = null;
+              }
+              
+              try {
+                cropper = new Cropper(imagePreview, {
+                  aspectRatio: 1,
+                  viewMode: 1,
+                  autoCropArea: 0.8,
+                  responsive: true,
+                  minContainerWidth: 400,
+                  minContainerHeight: 300,
+                  cropBoxResizable: true,
+                  dragMode: 'move',
+                  checkOrientation: true, // Fix orientation issues
+                  checkCrossOrigin: true  // Handle cross-origin issues
+                });
+                console.log('Cropper initialized');
+              } catch (error) {
+                console.error('Error initializing Cropper:', error);
+                alert('Failed to initialize image cropper. Please try again.');
+              }
+            };
+            
+            img.onerror = function() {
+              alert('Failed to load image. The file may be corrupted.');
+            };
+            
+            img.src = event.target.result;
           };
+          
           reader.onerror = function(error) {
             console.error('Error reading file:', error);
             alert('Error reading image file. Please try again.');
@@ -523,17 +561,26 @@
           this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
           
           try {
+            // Use higher quality settings for the cropped image
             cropper.getCroppedCanvas({
-              width: 500,
-              height: 500,
+              width: 800,  // Increased from 500 for better quality
+              height: 800, // Increased from 500 for better quality
+              imageSmoothingEnabled: true,
               imageSmoothingQuality: 'high'
             }).toBlob(blob => {
               console.log('Image cropped, adding to croppedBlobs');
-              croppedBlobs[currentImageIndex] = blob;
+              
+              // Create a new array position if needed
+              if (currentImageIndex >= croppedBlobs.length) {
+                croppedBlobs.push(blob);
+              } else {
+                croppedBlobs[currentImageIndex] = blob;
+              }
+              
               updateImagePreviews();
               showCropSuccessMessage();
               
-         
+              // Clean up cropper
               if (cropper) {
                 cropper.destroy();
                 cropper = null;
@@ -542,13 +589,13 @@
               currentImageIndex = -1;
               imagePreview.src = '';
               
-          
+              // Reset button state
               this.disabled = false;
               this.innerHTML = '<i class="fas fa-save mr-2"></i> Save Cropped Image';
               
-            
+              // Update UI
               checkImageRequirements();
-            }, 'image/jpeg', 0.9);
+            }, 'image/jpeg', 0.95);  // Increased quality from 0.9 to 0.95
           } catch (error) {
             console.error('Error cropping image:', error);
             alert('Error cropping image. Please try again.');
@@ -602,6 +649,11 @@
 
       function deleteImage(index) {
         console.log('Deleting cropped image at index:', index);
+        // Revoke any object URLs to prevent memory leaks
+        const preview = document.querySelector(`#imagePreviews img:nth-of-type(${index + 1})`);
+        if (preview && preview.src.startsWith('blob:')) {
+          URL.revokeObjectURL(preview.src);
+        }
         croppedBlobs.splice(index, 1);
         updateImagePreviews();
       }
@@ -628,20 +680,36 @@
           </div>`;
         }
         
-        imagePreviews.innerHTML = statusHtml + [
-          ...existingImages.map((img, index) => `
+        // Clear previous previews to avoid memory leaks
+        const oldPreviews = imagePreviews.querySelectorAll('img');
+        oldPreviews.forEach(img => {
+          if (img.src.startsWith('blob:')) {
+            URL.revokeObjectURL(img.src);
+          }
+        });
+        
+        const existingImagesHtml = existingImages.map((img, index) => {
+          const imgUrl = img.includes('?') ? `${img}&t=${new Date().getTime()}` : `${img}?t=${new Date().getTime()}`;
+          return `
             <div class="relative">
-              <img src="${img}" class="image-preview rounded border border-gray-200" onerror="this.src='/images/placeholder.jpg'" />
+              <img src="${imgUrl}" class="image-preview rounded border border-gray-200" onerror="this.src='/images/placeholder.jpg'" />
               <button type="button" onclick="deleteExistingImage(${index})" class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center transform translate-x-1/2 -translate-y-1/2 hover:bg-red-600 transition">×</button>
             </div>
-          `),
-          ...croppedBlobs.map((blob, index) => `
+          `;
+        });
+        
+        const croppedBlobsHtml = croppedBlobs.map((blob, index) => {
+          // Create a new object URL each time to avoid caching issues
+          const blobUrl = URL.createObjectURL(blob);
+          return `
             <div class="relative">
-              <img src="${URL.createObjectURL(blob)}" class="image-preview rounded border border-gray-200" />
+              <img src="${blobUrl}" class="image-preview rounded border border-gray-200" />
               <button type="button" onclick="deleteImage(${index})" class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center transform translate-x-1/2 -translate-y-1/2 hover:bg-red-600 transition">×</button>
             </div>
-          `)
-        ].join('');
+          `;
+        });
+        
+        imagePreviews.innerHTML = statusHtml + existingImagesHtml.join('') + croppedBlobsHtml.join('');
 
         document.getElementById('productImage').required = totalImages < 3 && !document.getElementById('productId').value;
         
@@ -681,11 +749,18 @@
       document.getElementById('productForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         console.log('Form submitted');
+        
+        // Disable the submit button to prevent double submission
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
 
         const totalImages = existingImages.length + croppedBlobs.length;
-        console.log('Total images:', totalImages);
         if (totalImages !== 3) {
           alert('Please provide exactly 3 images.');
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonText;
           return;
         }
 
@@ -697,6 +772,8 @@
         console.log('Sizes:', sizes);
         if (sizes.length === 0) {
           alert('Please provide at least one size with quantity greater than 0.');
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonText;
           return;
         }
 
@@ -717,33 +794,73 @@
         formData.append('isNew', isNewChecked);
         formData.append('isFeatured', isFeaturedChecked);
 
+        // Add existing images with cache-busting parameter
         existingImages.forEach((img, index) => {
-          formData.append('existingImages', img);
+          // Remove any existing cache-busting parameters
+          const cleanUrl = img.split('?')[0];
+          // Use index in the field name to ensure uniqueness
+          formData.append(`existingImages_${index}`, cleanUrl);
         });
 
-        croppedBlobs.forEach((blob, index) => {
-          formData.append('productImage', blob, `image${index}.jpg`);
+        // Process and optimize blobs before sending
+        const optimizedBlobPromises = croppedBlobs.map((blob, index) => {
+          return new Promise((resolve) => {
+            // Create a unique filename for each blob to prevent overwriting
+            const uniqueFilename = `image${index}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}.jpg`;
+            // Append each blob with a unique filename
+            formData.append('productImage', blob, uniqueFilename);
+            resolve();
+          });
         });
+        
+        // Wait for all blob optimizations to complete
+        await Promise.all(optimizedBlobPromises);
 
         for (let [key, value] of formData.entries()) {
           console.log(`formData: ${key}=${value}`);
         }
 
         try {
+          // Show saving indicator
+          const saveStatus = document.createElement('div');
+          saveStatus.className = 'fixed top-4 right-4 bg-blue-100 text-blue-800 p-3 rounded-lg shadow-md z-50';
+          saveStatus.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving product...';
+          document.body.appendChild(saveStatus);
+          
           const response = await fetch('/admin/saveProduct', {
             method: 'POST',
             body: formData,
           });
+          
           const text = await response.text();
           console.log('Server response:', text);
+          
           if (response.ok) {
-            window.location.reload();
+            saveStatus.className = 'fixed top-4 right-4 bg-green-100 text-green-800 p-3 rounded-lg shadow-md z-50';
+            saveStatus.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Product saved successfully!';
+            
+            // Delay reload to show success message
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           } else {
-            alert(text || 'Error saving product');
+            saveStatus.className = 'fixed top-4 right-4 bg-red-100 text-red-800 p-3 rounded-lg shadow-md z-50';
+            saveStatus.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> ${text || 'Error saving product'}`;
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+            
+            // Remove error message after 5 seconds
+            setTimeout(() => {
+              if (saveStatus.parentNode) {
+                saveStatus.parentNode.removeChild(saveStatus);
+              }
+            }, 5000);
           }
         } catch (error) {
           console.error('Form submission error:', error);
           alert('Error: ' + error.message);
+          submitButton.disabled = false;
+          submitButton.innerHTML = originalButtonText;
         }
       });
 

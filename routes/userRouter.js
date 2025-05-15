@@ -12,6 +12,7 @@ router.get('/login', userController.loadLogin);
   router.get('/pageNotFound', userController.loadPageNotFound);
   router.get('/shopall', userController.loadShopAll);
   router.get('/product/:id', userController.loadProductDetail);
+  // router.get('/Football', userController.loadFootball)
 
 
 router.get('/auth/google/signup', passport.authenticate('google-signup', {

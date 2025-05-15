@@ -29,12 +29,12 @@ exports.saveCategory = async (req, res) => {
         let subcats = subcategories ? subcategories.split(',').map(s => s.trim()).filter(s => s) : [];
 
         if (categoryId) {
-            // Update existing category
+        
             const updateData = { name, description, subcategories: subcats };
             if (image) updateData.image = image;
             await Category.findByIdAndUpdate(categoryId, updateData);
         } else {
-            // Create new category
+     
             if (!image) return res.status(400).send('Image is required');
             const category = new Category({
                 name,

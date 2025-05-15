@@ -3,6 +3,7 @@ const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
 const User = require("../../models/userSchema");
 const {Product} = require('../../models/productSchema')
+const {Category} = require('../../models/categorySchema')
 require("dotenv").config();
 
 const loadVerifyOTP = (req, res) => {
@@ -16,6 +17,7 @@ const loadVerifyOTP = (req, res) => {
         res.status(500).render("page-404");
     }
 };
+
 
 const loadHomepage = async (req, res) => {
     try {
@@ -50,14 +52,17 @@ const loadHomepage = async (req, res) => {
             .limit(limit);
         const totalPages = Math.ceil(total / limit);
 
-        // Fetch featured products
+     
         const featuredProducts = await Product.find({ isListed: true, isFeatured: true })
             .limit(8);
 
-        // Fetch new products
+  
         const newProducts = await Product.find({ isListed: true, isNew: true })
             .sort({ createdAt: -1 })
             .limit(8);
+
+        const categories = await Category.find({isListed:true}).sort({createdAt:-1})
+        
 
         return res.render('home', {
             user: user || null,
@@ -66,7 +71,8 @@ const loadHomepage = async (req, res) => {
             newProducts,
             currentPage: page,
             totalPages,
-            sort
+            sort,
+            categories
         });
     } catch (error) {
         console.error("Home page error:", error);
@@ -79,6 +85,10 @@ const loadShopAll = async (req, res) => {
         const user = req.session.user;
         const sort = req.query.sort || 'alphabetical-asc';
         const search = req.query.search || '';
+        const categoryId = req.query.category || '';
+        const subcategory = req.query.subcategory || '';
+        const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : '';
+        const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : '';
         const page = parseInt(req.query.page) || 1;
         const limit = 10;
         const skip = (page - 1) * limit;
@@ -100,29 +110,109 @@ const loadShopAll = async (req, res) => {
                 break;
         }
 
-        // Build the query with search functionality
-        const query = { isListed: true };
+        const categories = await Category.find({ isListed: true }).sort({ name: 1 });
         
-        // Add search functionality
-        if (search) {
-            query.$or = [
-                { productName: { $regex: search, $options: 'i' } },  // Case-insensitive search in product name
-                { description: { $regex: search, $options: 'i' } }    // Case-insensitive search in description
-            ];
+        // Get the selected category to access its subcategories
+        let selectedCategory = null;
+        if (categoryId) {
+            selectedCategory = await Category.findById(categoryId);
         }
         
-        // Count total matching products for pagination
+        // Get all subcategories for the selected category
+        const subcategories = selectedCategory ? selectedCategory.subcategories : [];
+    
+        const query = { isListed: true };
+        
+        // Add category filter if selected
+        if (categoryId) {
+            query.category = categoryId;
+        }
+        
+        // Add subcategory filter if selected
+        if (subcategory) {
+            query.subcategory = subcategory;
+        }
+        
+        // Add price range filter if provided
+        if (minPrice !== '' && maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice, $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice, $lte: maxPrice } }
+                    ]
+                }
+            ];
+        } else if (minPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice } }
+                    ]
+                }
+            ];
+        } else if (maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $lte: maxPrice } }
+                    ]
+                }
+            ];
+        }
+      
+        // Add search filter if provided
+        if (search) {
+            // If we already have $or for price filtering, we need to use $and to combine with search
+            if (query.$or) {
+                const priceConditions = query.$or;
+                query.$or = undefined; // Remove the existing $or
+                
+                query.$and = [
+                    { $or: priceConditions },
+                    { $or: [
+                        { productName: { $regex: search, $options: 'i' } }, 
+                        { description: { $regex: search, $options: 'i' } }
+                    ]}
+                ];
+            } else {
+                query.$or = [
+                    { productName: { $regex: search, $options: 'i' } }, 
+                    { description: { $regex: search, $options: 'i' } }
+                ];
+            }
+        }
+
         const total = await Product.countDocuments(query);
         
-        // Get products with search and sort
         const products = await Product.find(query)
+            .populate('category', 'name')
             .sort(sortOption)
             .skip(skip)
             .limit(limit);
             
         const totalPages = Math.ceil(total / limit);
 
-        // Add a message if no products found with search
+        // Get min and max prices for the price range filter
+        const priceStats = await Product.aggregate([
+            { $match: { isListed: true } },
+            { $group: {
+                _id: null,
+                minPrice: { $min: { $ifNull: ['$salePrice', '$regularPrice'] } },
+                maxPrice: { $max: '$regularPrice' }
+            }}
+        ]);
+        
+        const priceRange = priceStats.length > 0 ? {
+            min: Math.floor(priceStats[0].minPrice),
+            max: Math.ceil(priceStats[0].maxPrice)
+        } : { min: 0, max: 1000 };
+     
         let searchMessage = '';
         if (search && products.length === 0) {
             searchMessage = `No products found matching "${search}". Try a different search term.`;
@@ -130,14 +220,47 @@ const loadShopAll = async (req, res) => {
             searchMessage = `Showing results for "${search}"`;
         }
 
+        // Add filter message
+        let filterMessage = '';
+        if (categoryId || subcategory || minPrice !== '' || maxPrice !== '') {
+            filterMessage = 'Filtered results';
+            
+            if (categoryId) {
+                const category = categories.find(cat => cat._id.toString() === categoryId);
+                if (category) {
+                    filterMessage += ` for category "${category.name}"`;
+                    
+                    if (subcategory) {
+                        filterMessage += ` > "${subcategory}"`;
+                    }
+                }
+            }
+            
+            if (minPrice !== '' && maxPrice !== '') {
+                filterMessage += ` with price between $${minPrice} and $${maxPrice}`;
+            } else if (minPrice !== '') {
+                filterMessage += ` with price from $${minPrice}`;
+            } else if (maxPrice !== '') {
+                filterMessage += ` with price up to $${maxPrice}`;
+            }
+        }
+
         return res.render('shopall', {
             user: user || null,
             products,
+            categories,
+            subcategories,
             currentPage: page,
             totalPages,
             sort,
             search,
-            searchMessage
+            searchMessage,
+            filterMessage,
+            categoryId,
+            subcategory,
+            minPrice: minPrice || '',
+            maxPrice: maxPrice || '',
+            priceRange
         });
     } catch (error) {
         console.error("Home page error:", error);
@@ -146,15 +269,16 @@ const loadShopAll = async (req, res) => {
 };
 
 
+
 const loadLogin = async (req, res) => {
     try {
         if (!req.session.user) {
             return res.render("login", { message: null });
         }
-        return res.render('home', { user: req.session.user || null });
+        return res.redirect('/');
     } catch (error) {
         console.error("Login page error:", error);
-        res.status(500).render("page-500", { message: "Server Error" });
+        res.status(500).render("page-404", { message: "Server Error" });
     }
 };
 
@@ -363,7 +487,7 @@ const logout = async (req, res) => {
         req.session.destroy((err) => {
             if (err) {
                 console.error("Session destroy error:", err.message);
-                return res.status(500).render('page-500', { message: "Server Error" });
+                return res.status(500).render('page-404', { message: "Server Error" });
             }
             return res.redirect("/login");
         });
@@ -382,14 +506,14 @@ const loadProductDetail = async (req, res) => {
             return res.status(404).render('page-404', { message: 'Invalid product ID' });
         }
         
-        // Find the product by ID and make sure it's listed
+     
         const product = await Product.findOne({ _id: productId, isListed: true }).populate('category');
         
         if (!product) {
             return res.status(404).render('page-404', { message: 'Product not found' });
         }
         
-        // Calculate total stock
+   
         let totalStock = 0;
         if (product.sizes && product.sizes.length > 0) {
             product.sizes.forEach(size => {
@@ -397,7 +521,7 @@ const loadProductDetail = async (req, res) => {
             });
         }
         
-        // Get related products (same category, excluding current product)
+   
         const relatedProducts = await Product.find({
             category: product.category._id,
             _id: { $ne: product._id },

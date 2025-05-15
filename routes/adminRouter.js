@@ -23,7 +23,10 @@ const productStorage = multer.diskStorage({
         cb(null, 'public/uploads/products');
     },
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
+        // Create a truly unique filename with original name, timestamp, and random string
+        const uniquePrefix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+        const originalExt = path.extname(file.originalname);
+        cb(null, `${uniquePrefix}-${file.fieldname}${originalExt}`);
     }
 });
 
@@ -61,7 +64,6 @@ router.get('/listCategory',adminAuth, categoryController.listCategory);
 router.get('/products',adminAuth, productController.getProducts);
 router.get('/unlistProduct',adminAuth, productController.unlistProduct);
 router.get('/listProduct',adminAuth, productController.listProduct);
-
 
 router.post('/loginaction', adminController.login);
 router.post('/saveCategory', uploadCategory.single('image'), categoryController.saveCategory);

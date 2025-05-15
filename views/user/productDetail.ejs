@@ -223,7 +223,7 @@
     </div>
   </section>
 
-  <!-- Product Details Tabs -->
+ 
   <section class="py-12 bg-white">
     <div class="max-w-7xl mx-auto px-6">
       <div class="border-b border-gray-200 mb-8">
@@ -286,7 +286,7 @@
       
      
 
-  <!-- Related Products -->
+ 
   <section class="py-12 bg-gray-50">
     <div class="max-w-7xl mx-auto px-6">
       <h2 class="text-2xl font-bold mb-8">You May Also Like</h2>
@@ -354,18 +354,18 @@
   <%- include("../../views/partials/user/footer") %>
 
   <script>
-    // Image gallery functionality
+   
     function changeMainImage(imageSrc, thumbnail) {
       document.getElementById('mainProductImage').src = imageSrc;
       
-      // Update active thumbnail
+    
       document.querySelectorAll('.product-image-thumbnail').forEach(thumb => {
         thumb.classList.remove('active');
       });
       thumbnail.classList.add('active');
     }
     
-    // Quantity control
+
     document.getElementById('decreaseQuantity').addEventListener('click', function() {
       const quantityInput = document.getElementById('quantity');
       const currentValue = parseInt(quantityInput.value);
@@ -383,12 +383,12 @@
       }
     });
     
-    // Tab functionality
+
     document.querySelectorAll('.tab-btn').forEach(button => {
       button.addEventListener('click', function() {
         const tabId = this.getAttribute('data-tab');
         
-        // Update active tab button
+        
         document.querySelectorAll('.tab-btn').forEach(btn => {
           btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
           btn.classList.add('border-transparent', 'text-gray-500');
@@ -396,7 +396,7 @@
         this.classList.add('active', 'border-blue-600', 'text-blue-600');
         this.classList.remove('border-transparent', 'text-gray-500');
         
-        // Show active tab content
+      
         document.querySelectorAll('.tab-content').forEach(content => {
           content.classList.add('hidden');
         });
@@ -404,7 +404,7 @@
       });
     });
     
-    // Add to cart functionality
+   
     document.getElementById('addToCartBtn').addEventListener('click', function() {
       const selectedSize = document.querySelector('input[name="size"]:checked');
       const quantity = document.getElementById('quantity').value;
@@ -415,10 +415,9 @@
       }
       
       alert(`Added ${quantity} item(s) of size ${selectedSize.value} to cart!`);
-      // Here you would normally send this data to your cart API
+    
     });
     
-    // Buy now functionality
     document.getElementById('buyNowBtn').addEventListener('click', function() {
       const selectedSize = document.querySelector('input[name="size"]:checked');
       const quantity = document.getElementById('quantity').value;
@@ -429,7 +428,7 @@
       }
       
       alert(`Proceeding to checkout with ${quantity} item(s) of size ${selectedSize.value}!`);
-      // Here you would normally redirect to checkout page
+     
     });
   </script>
 </body>

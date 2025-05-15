@@ -3,130 +3,173 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Prime Jersey Store - Premium Sports Jerseys</title>
+  <title>Prime Jersey - Authentic Sports Jerseys</title>
+  <meta name="description" content="Shop authentic NBA, Football, and Cricket jerseys at Prime Jersey. Official merchandise with fast shipping and easy returns.">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
   <style>
     body {
       font-family: 'Inter', sans-serif;
       scroll-behavior: smooth;
+      background-color: #fafafa;
     }
+
     .hero-bg {
-      background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-                  url('/images/cover.webp') center/cover no-repeat;
+      background: url('/images/cover.webp') center/cover no-repeat;
     }
-    .nav-link {
-      position: relative;
-      padding-bottom: 2px;
+
+    .ft-bg {
+      background: url('/images/ft-img.png') center/cover no-repeat;
     }
-    .nav-link:after {
-      content: '';
-      position: absolute;
-      width: 0;
-      height: 2px;
-      bottom: 0;
-      left: 0;
-      background-color: #2563eb;
-      transition: width 0.3s ease;
-    }
-    .nav-link:hover:after {
-      width: 100%;
-    }
+
+    /* Consistent Product Cards */
     .product-card {
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      background-color: white;
+      border-radius: 0;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      border: 1px solid #f0f0f0;
     }
+
     .product-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
+
     .sale-badge {
       position: absolute;
       top: 12px;
       right: 12px;
-      background-color: #ef4444;
+      background-color: #000;
       color: white;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      z-index: 10;
     }
-    .testimonial-card {
-      transition: all 0.3s ease;
-      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+
+    /* Improved image container */
+    .product-image-container {
+      position: relative;
+      padding-top: 120%;
+      background-color: #f8f8f8;
     }
-    .testimonial-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-    }
-    .newsletter-input:focus {
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+
+    .product-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.3s ease;
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="text-gray-900">
   <%- include("../../views/partials/user/header") %>
 
-
+  <!-- Hero Section -->
   <section class="hero-bg h-[90vh] flex items-center text-white">
     <div class="max-w-7xl mx-auto px-6 py-10 w-full">
+      <!-- Hero content can be added here -->
     </div>
   </section>
 
+  <section class="py-16 bg-white">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="text-3xl font-light text-gray-900 mb-4 tracking-tight">Shop by Category</h2>
+      <p class="text-gray-500 max-w-2xl mx-auto text-md">Discover authentic jerseys from the world's top leagues</p>
+    </div>
 
-  <section id="featured" class="py-20 bg-white">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <% if (categories && categories.length > 0) { %>
+        <% categories.forEach(category => { %>
+          <a href="/category/<%= category.slug %>" class="category-card group relative overflow-hidden h-80 rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div>
+            <img src="<%= category.image %>" 
+                 alt="<%= category.name %>" 
+                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+            <div class="absolute bottom-0 left-0 z-20 p-6 w-full">
+              <div class="flex items-center justify-center w-14 h-14 bg-white rounded-full mb-3 mx-auto group-hover:bg-blue-600 transition-colors duration-300">
+                <i class="fas fa-basketball-ball text-xl text-gray-700 group-hover:text-white transition-colors"></i>
+              </div>
+              <h3 class="text-xl font-medium text-white text-center mb-1"><%= category.name %></h3>
+              <p class="text-sm text-gray-200 text-center"><%= category.description %></p>
+            </div>
+          </a>
+        <% }) %>
+      <% } else { %>
+        <p class="col-span-3 text-center text-gray-500">No categories available.</p>
+      <% } %>
+    </div>
+
+    <div class="text-center mt-12">
+      <a href="/categories" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors">
+        View all categories
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+
+
+  <!-- Featured Section - Improved Consistency -->
+  <section id="featured" class="py-16 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-bold mb-4">Featured Jerseys</h2>
-        <p class="text-lg text-gray-600 max-w-2xl mx-auto">Discover our most popular authentic jerseys worn by professional athletes</p>
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-light mb-3 tracking-tight">Featured Jerseys</h2>
+        <p class="text-gray-500 max-w-2xl mx-auto">Authentic jerseys worn by professional athletes</p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10 mb-16">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
         <% if (featuredProducts && featuredProducts.length > 0) { %>
           <% featuredProducts.forEach(product => { %>
-            <a href="/product/<%= product._id %>" class="group">
-              <div class="product-card bg-white rounded-xl overflow-hidden shadow-md h-full flex flex-col border border-gray-100 relative">
+            <a href="/product/<%= product._id %>" class="group" aria-label="<%= product.productName %>">
+              <div class="product-card">
                 <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
                   <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
                 <% } %>
-                <div class="overflow-hidden relative pt-[100%]">
+                <div class="product-image-container">
                   <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>"
-                       class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                       class="product-image group-hover:opacity-90">
                 </div>
-                <div class="p-6 flex-grow flex flex-col">
-                  <div class="flex-grow">
-                    <h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition mb-2"><%= product.productName %></h3>
-                    <p class="text-gray-600 mb-4 line-clamp-2"><%= product.description %></p>
-                  </div>
-                  <div>
-                    <div class="flex justify-between items-center">
-                      <div>
-                        <span class="text-xl font-bold text-gray-900">
-                          $<%= product.salePrice || product.regularPrice %>
-                        </span>
-                        <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                          <span class="text-sm text-gray-500 line-through ml-2">$<%= product.regularPrice %></span>
-                        <% } %>
-                      </div>
-                      <% 
-                        let totalStock = 0;
-                        if (product.sizes && product.sizes.length > 0) {
-                          product.sizes.forEach(size => {
-                            totalStock += size.quantity || 0;
-                          });
-                        }
-                      %>
-                      <% if (totalStock > 0) { %>
-                        <span class="text-xs bg-green-100 text-green-800 px-3 py-1.5 rounded-full flex items-center">
-                          <i class="fas fa-check-circle mr-1"></i> In Stock
-                        </span>
-                      <% } else { %>
-                        <span class="text-xs bg-red-100 text-red-800 px-3 py-1.5 rounded-full flex items-center">
-                          <i class="fas fa-times-circle mr-1"></i> Sold Out
-                        </span>
+                <div class="p-4 flex flex-col flex-grow">
+                  <h3 class="text-md font-medium text-gray-900 mb-1"><%= product.productName %></h3>
+                  <div class="flex justify-between items-center mt-3">
+                    <div>
+                      <span class="text-sm font-medium text-gray-900">
+                        $<%= product.salePrice || product.regularPrice %>
+                      </span>
+                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
                       <% } %>
                     </div>
+                    <% 
+                      let totalStock = 0;
+                      if (product.sizes && product.sizes.length > 0) {
+                        product.sizes.forEach(size => {
+                          totalStock += size.quantity || 0;
+                        });
+                      }
+                    %>
+                    <% if (totalStock > 0) { %>
+                      <span class="text-xs text-green-600 font-medium">In Stock</span>
+                    <% } else { %>
+                      <span class="text-xs text-gray-400">Sold Out</span>
+                    <% } %>
                   </div>
                 </div>
               </div>
@@ -134,75 +177,139 @@
           <% }); %>
         <% } else { %>
           <div class="col-span-full text-center py-10">
-            <p class="text-gray-500 text-lg">No featured products available at the moment. Check back soon!</p>
+            <p class="text-gray-500">No featured products available at the moment.</p>
           </div>
         <% } %>
       </div>
-
-
     </div>
   </section>
 
-  <section class="py-20 bg-gray-50">
+  <!-- Why Prime Section - Enhanced -->
+  <section class="py-16 bg-white">
     <div class="max-w-7xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-bold mb-4">Why Prime Jersey Store?</h2>
-        <p class="text-lg text-gray-600 max-w-2xl mx-auto">We deliver authentic sports apparel with unmatched quality</p>
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-light mb-3 tracking-tight">Why Prime Jersey</h2>
+        <div class="w-16 h-0.5 bg-gray-300 mx-auto"></div>
       </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-        <div class="bg-white p-8 rounded-xl shadow-sm text-center">
-          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i class="fas fa-award text-blue-600 text-2xl"></i>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div class="text-center px-4">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-certificate text-gray-600 text-xl"></i>
           </div>
-          <h3 class="text-xl font-bold mb-3">Authentic Quality</h3>
-          <p class="text-gray-600">100% officially licensed merchandise with exact player specifications and team details.</p>
+          <h3 class="text-lg font-medium mb-3">Authentic Quality</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Officially licensed merchandise with exact specifications as worn by professional athletes.</p>
         </div>
         
-        <div class="bg-white p-8 rounded-xl shadow-sm text-center">
-          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i class="fas fa-truck text-green-600 text-2xl"></i>
+        <div class="text-center px-4">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-shipping-fast text-gray-600 text-xl"></i>
           </div>
-          <h3 class="text-xl font-bold mb-3">Fast Shipping</h3>
-          <p class="text-gray-600">Get your jersey in 2-3 business days with our premium express shipping options.</p>
+          <h3 class="text-lg font-medium mb-3">Fast Shipping</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">Priority processing with delivery in 2-3 business days.</p>
         </div>
         
-        <div class="bg-white p-8 rounded-xl shadow-sm text-center">
-          <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i class="fas fa-exchange-alt text-purple-600 text-2xl"></i>
+        <div class="text-center px-4">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-exchange-alt text-gray-600 text-xl"></i>
           </div>
-          <h3 class="text-xl font-bold mb-3">Easy Returns</h3>
-          <p class="text-gray-600">30-day hassle-free returns if you're not completely satisfied with your purchase.</p>
+          <h3 class="text-lg font-medium mb-3">Easy Returns</h3>
+          <p class="text-gray-500 text-sm leading-relaxed">30-day hassle-free returns with free return shipping.</p>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- New Arrivals Section - Consistent with Featured -->
+  <section id="new-arrivals" class="py-16 bg-[#fafafa]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-light mb-3 tracking-tight">New Arrivals</h2>
+        <p class="text-gray-500 max-w-2xl mx-auto">Latest additions to our premium collection</p>
+      </div>
 
-  <%- include("../../views/partials/user/footer") %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
+        <% if (newProducts && newProducts.length > 0) { %>
+          <% newProducts.forEach(product => { %>
+            <a href="/product/<%= product._id %>" class="group" aria-label="<%= product.productName %>">
+              <div class="product-card">
+                <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                  <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
+                <% } %>
+                <div class="product-image-container">
+                  <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>"
+                       class="product-image group-hover:opacity-90">
+                </div>
+                <div class="p-4 flex flex-col flex-grow">
+                  <h3 class="text-md font-medium text-gray-900 mb-1"><%= product.productName %></h3>
+                  <div class="flex justify-between items-center mt-3">
+                    <div>
+                      <span class="text-sm font-medium text-gray-900">
+                        $<%= product.salePrice || product.regularPrice %>
+                      </span>
+                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
+                      <% } %>
+                    </div>
+                    <% 
+                      let totalStock = 0;
+                      if (product.sizes && product.sizes.length > 0) {
+                        product.sizes.forEach(size => {
+                          totalStock += size.quantity || 0;
+                        });
+                      }
+                    %>
+                    <% if (totalStock > 0) { %>
+                      <span class="text-xs text-green-600 font-medium">In Stock</span>
+                    <% } else { %>
+                      <span class="text-xs text-gray-400">Sold Out</span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </a>
+          <% }); %>
+        <% } else { %>
+          <div class="col-span-full text-center py-10">
+            <p class="text-gray-500">No new products available at the moment.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <!-- Promo Section -->
+  <section class="ft-bg h-[100vh] flex items-center text-white font-sans">
+    <div class="max-w-7xl mx-auto px-6 py-10 w-full">
+      <h2 class="text-4xl font-semibold text-white mb-4 tracking-tight">Supernova Rise 2</h2>
+      <p class="text-lg text-white mb-6 max-w-md leading-relaxed">
+        Running is never easy, but with the Supercomfort of Supernova, it's always nice.
+      </p>
+      <button class="bg-white text-black font-medium px-6 py-3 rounded hover:bg-gray-200 transition-colors duration-200">
+        Shop now
+      </button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-100 mt-[-5rem]">
+    <div>
+      <%- include("../../views/partials/user/footer") %>
+    </div>
+  </footer>
 
   <script>
     // Smooth scrolling for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
-        document.querySelector(this.getAttribute('href')).scrollIntoView({
-          behavior: 'smooth'
-        });
-      });
-    });
-
-    // Animate elements when they come into view
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-fadeIn');
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth'
+          });
         }
       });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.product-card, .testimonial-card').forEach(card => {
-      observer.observe(card);
     });
   </script>
 </body>

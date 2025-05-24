@@ -48,19 +48,14 @@
 
     <a href="/wishlist" class="relative hover:opacity-70 transition mr-4" id="wishlistIcon">
       <% 
- 
         let hasWishlistItems = false;
         if (user && user.whishlist) {
-         
           if (Array.isArray(user.whishlist)) {
             hasWishlistItems = user.whishlist.length > 0;
           } else if (typeof user.whishlist === 'object') {
-           
             hasWishlistItems = Object.keys(user.whishlist).length > 0;
           }
         }
-       
-        
       %>
       <i class="<%= hasWishlistItems ? 'fas' : 'far' %> fa-heart text-lg"></i>
       <% if (hasWishlistItems) { %>
@@ -70,10 +65,11 @@
     
     <a href="/cart" class="relative hover:opacity-70 transition">
       <% 
-       
         let hasCartItems = false;
-        if (user && user.cartCount !== undefined) {
-          hasCartItems = true
+        if (user && user.cartCount && user.cartCount > 0) {
+          hasCartItems = true;
+        } else if (user && user.cart && user.cart.items && Array.isArray(user.cart.items)) {
+          hasCartItems = user.cart.items.length > 0;
         }
       %>
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"

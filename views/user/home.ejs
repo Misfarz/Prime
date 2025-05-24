@@ -159,10 +159,10 @@
                   <div class="flex justify-between items-center mt-3">
                     <div>
                       <span class="text-sm font-medium text-gray-900">
-                        $<%= product.salePrice || product.regularPrice %>
+                        ₹<%= product.salePrice || product.regularPrice %>
                       </span>
                       <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
+                        <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
                     <% 
@@ -253,7 +253,7 @@
                   <div class="flex justify-between items-center mt-3">
                     <div>
                       <span class="text-sm font-medium text-gray-900">
-                        $<%= product.salePrice || product.regularPrice %>
+                        ₹<%= product.salePrice || product.regularPrice %>
                       </span>
                       <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
                         <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>

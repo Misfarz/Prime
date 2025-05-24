@@ -153,14 +153,14 @@
                                         <p class="text-sm text-gray-600">
                                             <% if (item.size) { %>Size: <%= item.size %>,<% } %>
                                         </p>
-                                        <p class="text-sm text-gray-600">Price: <span class="price"><%= item.price ? item.price.toFixed(2) : (item.product.salePrice || item.product.regularPrice).toFixed(2) %></span></p>
+                                        <p class="text-sm text-gray-600">Price: <span class="price">₹<%= item.price ? item.price.toFixed(2) : (item.product.salePrice || item.product.regularPrice).toFixed(2) %></span></p>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-4">
                                     <div class="flex items-center space-x-2">
                                         <span class="px-2 py-1 bg-gray-100 rounded quantity"><%= item.quantity %></span>
                                     </div>
-                                    <span class="font-medium"><%= (item.price * item.quantity).toFixed(2) %></span>
+                                    <span class="font-medium">₹<%= (item.price * item.quantity).toFixed(2) %></span>
                                 </div>
                             </div>
                         <% }); %>
@@ -175,19 +175,19 @@
                 <div class="mt-8 space-y-4">
                     <div class="flex justify-between">
                         <span>Subtotal</span>
-                        <span id="subtotal"><%= summary.subtotal.toFixed(2) %></span>
+                        <span id="subtotal">₹<%= summary.subtotal.toFixed(2) %></span>
                     </div>
                     <div class="flex justify-between">
                         <span>Shipping</span>
-                        <span id="shipping"><%= summary.shipping.toFixed(2) %></span>
+                        <span id="shipping">₹<%= summary.shipping.toFixed(2) %></span>
                     </div>
                     <div class="flex justify-between">
                         <span>Tax</span>
-                        <span id="tax"><%= summary.tax.toFixed(2) %></span>
+                        <span id="tax">₹<%= summary.tax.toFixed(2) %></span>
                     </div>
                     <div class="border-t pt-4 flex justify-between font-bold text-lg">
                         <span>Total</span>
-                        <span id="total"><%= summary.total.toFixed(2) %></span>
+                        <span id="total">₹<%= summary.total.toFixed(2) %></span>
                     </div>
                 </div>
 

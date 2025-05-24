@@ -442,8 +442,49 @@
 
   <%- include("../../views/partials/user/footer") %>
 
+  <!-- Toast Notification Container -->
+  <div id="toastNotification" class="toast-notification">
+    <i id="toastIcon" class="fas fa-check-circle"></i>
+    <div id="toastMessage" class="toast-message">Item added to cart successfully!</div>
+    <button id="toastClose" class="toast-close">&times;</button>
+  </div>
+
   <script>
- 
+  // Toast notification function
+  function showToast(type, message) {
+    const toast = document.getElementById('toastNotification');
+    const icon = document.getElementById('toastIcon');
+    const messageEl = document.getElementById('toastMessage');
+    
+    // Set message
+    messageEl.textContent = message;
+    
+    // Set icon and color based on type
+    // Always use black background
+    toast.style.backgroundColor = '#000000';
+    
+    if (type === 'success') {
+      icon.className = 'fas fa-check-circle';
+    } else if (type === 'error') {
+      icon.className = 'fas fa-exclamation-circle';
+    } else if (type === 'warning') {
+      icon.className = 'fas fa-exclamation-triangle';
+    }
+    
+    // Show toast
+    toast.classList.add('show');
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+  
+  // Close toast when clicking the X button
+  document.getElementById('toastClose').addEventListener('click', function() {
+    document.getElementById('toastNotification').classList.remove('show');
+  });
+
     function toggleWishlist(button, productId) {
       const wishlistIcon = button.querySelector('i');
       const isInWishlist = wishlistIcon.classList.contains('fas');
@@ -568,24 +609,39 @@
         
         if (data.success) {
       
-          const cartCountElement = document.querySelector('.cart-count');
-          if (cartCountElement) {
-            cartCountElement.textContent = data.cartCount;
-            cartCountElement.classList.remove('hidden');
-          } else {
+          // Update cart indicator in header
+          const wishlistIcon = document.querySelector('#wishlistIcon');
+          if (wishlistIcon && wishlistIcon.nextElementSibling) {
+            const cartIndicator = wishlistIcon.nextElementSibling;
             
-            window.location.reload();
-            return;
+            // Add red dot indicator if not already present
+            if (!cartIndicator.querySelector('span')) {
+              const indicatorDot = document.createElement('span');
+              indicatorDot.className = 'absolute -top-1 -right-1 bg-red-500 rounded-full h-2 w-2';
+              cartIndicator.appendChild(indicatorDot);
+            }
           }
           
-          alert('Product added to cart successfully!');
+          // Show success toast notification
+          showToast('success', 'Product added to cart successfully!');
+          
+          // Update cart count in session without reloading
+          if (data.cartCount) {
+            // If we have a cart count element, update it
+            const cartCountElement = document.querySelector('.cart-count');
+            if (cartCountElement) {
+              cartCountElement.textContent = data.cartCount;
+              cartCountElement.classList.remove('hidden');
+            }
+          }
         } else {
-          alert(data.message || 'Failed to add product to cart');
+          // Show error toast notification
+          showToast('error', data.message || 'Failed to add product to cart');
         }
       })
       .catch(error => {
         console.error('Error adding to cart:', error);
-        alert('An error occurred. Please try again.');
+        showToast('error', 'An error occurred. Please try again.');
        
         this.disabled = false;
         this.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i> Add to Cart';

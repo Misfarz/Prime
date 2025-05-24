@@ -21,11 +21,32 @@ const loadVerifyOTP = (req, res) => {
 
 const loadHomepage = async (req, res) => {
     try {
-        const user = req.session.user;
+        let user = req.session.user;
         const sort = req.query.sort || 'alphabetical-asc';
         const page = parseInt(req.query.page) || 1;
         const limit = 10;
         const skip = (page - 1) * limit;
+
+        // If user is logged in, fetch complete user data with wishlist and cart
+        if (user && user._id) {
+            user = await User.findById(user._id)
+                .populate('whishlist')
+                .populate({
+                    path: 'cart',
+                    populate: {
+                        path: 'items.product'
+                    }
+                });
+            
+            // Set cartCount for the indicator
+            if (user.cart && user.cart.items) {
+                req.session.user.cartCount = user.cart.items.length;
+            } else {
+                req.session.user.cartCount = 0;
+            }
+            
+            req.session.user = user; 
+        }
 
         let sortOption;
         switch (sort) {

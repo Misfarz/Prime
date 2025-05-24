@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Successful - Prime</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <%- include('../partials/user/header') %>
+
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+            <div class="mb-8">
+                <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                    <i class="fas fa-check-circle text-green-500 text-5xl"></i>
+                </div>
+            </div>
+            
+            <h1 class="text-3xl font-bold mb-4">Thank You, <%= userName %>!</h1>
+            <p class="text-gray-600 mb-6">Your order has been placed successfully and is being processed.</p>
+            
+            <div class="bg-blue-50 p-4 rounded-lg mb-8">
+                <p class="text-blue-800">Order ID: <span class="font-medium"><%= order._id %></span></p>
+                <p class="text-blue-800 mt-1">Order Date: <span class="font-medium"><%= orderDate %></span></p>
+                <p class="text-blue-800 mt-1">Payment Method: <span class="font-medium"><%= paymentMethod.toUpperCase() %></span></p>
+                <p class="text-blue-800 mt-1">Payment Status: <span class="font-medium"><%= paymentStatus %></span></p>
+                <p class="text-blue-800 mt-1">Order Status: <span class="font-medium"><%= orderStatus %></span></p>
+                <p class="text-sm text-blue-600 mt-2">A confirmation email has been sent to your registered email address.</p>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+                <a href="/profile?tab=orders" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-box-open mr-2"></i> View Order Details
+                </a>
+                <a href="/" class="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-shopping-bag mr-2"></i> Continue Shopping
+                </a>
+            </div>
+            
+            <!-- Order Summary Section -->
+            <div class="border-t border-gray-200 pt-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4">Order Summary</h3>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-medium">₹<%= order.subtotal.toFixed(2) %></span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-600">Shipping:</span>
+                        <span class="font-medium">₹<%= order.shipping.toFixed(2) %></span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-600">Tax:</span>
+                        <span class="font-medium">₹<%= order.tax.toFixed(2) %></span>
+                    </div>
+                    <div class="flex justify-between font-bold border-t border-gray-300 pt-2 mt-2">
+                        <span>Total:</span>
+                        <span>₹<%= order.total.toFixed(2) %></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What Happens Next Section -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-lg font-semibold mb-4">What Happens Next?</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="p-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-clipboard-check text-blue-600"></i>
+                        </div>
+                        <h4 class="font-medium mb-2">Order Processing</h4>
+                        <p class="text-sm text-gray-600">We're preparing your order for shipment.</p>
+                    </div>
+                    <div class="p-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-shipping-fast text-blue-600"></i>
+                        </div>
+                        <h4 class="font-medium mb-2">Shipping</h4>
+                        <p class="text-sm text-gray-600">Your order will be shipped within 1-2 business days.</p>
+                    </div>
+                    <div class="p-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-home text-blue-600"></i>
+                        </div>
+                        <h4 class="font-medium mb-2">Delivery</h4>
+                        <p class="text-sm text-gray-600">Estimated delivery time is 3-5 business days.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/user/footer') %>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add any JavaScript functionality here if needed
+        });
+    </script>
+</body>
+</html>

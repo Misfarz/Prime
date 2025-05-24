@@ -301,7 +301,7 @@
       let croppedBlob = null;
       let originalImageUrl = null;
 
-      // Function to show edit category with image
+      
       function openEditCategoryModalWithImage(id, name, description, subcategories, imageUrl) {
         document.getElementById('modalTitle').textContent = 'Edit Category';
         document.getElementById('categoryId').value = id;
@@ -309,8 +309,7 @@
         document.getElementById('description').value = description;
         document.getElementById('subcategories').value = subcategories;
         document.getElementById('image').required = false;
-        
-        // Show current image if available
+     
         if (imageUrl) {
           originalImageUrl = imageUrl;
           currentImage.src = imageUrl + '?t=' + new Date().getTime(); // Add cache busting

@@ -112,28 +112,28 @@ const loadShopAll = async (req, res) => {
 
         const categories = await Category.find({ isListed: true }).sort({ name: 1 });
         
-        // Get the selected category to access its subcategories
+   
         let selectedCategory = null;
         if (categoryId) {
             selectedCategory = await Category.findById(categoryId);
         }
         
-        // Get all subcategories for the selected category
+       
         const subcategories = selectedCategory ? selectedCategory.subcategories : [];
     
         const query = { isListed: true };
         
-        // Add category filter if selected
+       
         if (categoryId) {
             query.category = categoryId;
         }
         
-        // Add subcategory filter if selected
+       
         if (subcategory) {
             query.subcategory = subcategory;
         }
         
-        // Add price range filter if provided
+   
         if (minPrice !== '' && maxPrice !== '') {
             query.$or = [
                 { salePrice: { $gte: minPrice, $lte: maxPrice } },
@@ -166,12 +166,12 @@ const loadShopAll = async (req, res) => {
             ];
         }
       
-        // Add search filter if provided
+     
         if (search) {
-            // If we already have $or for price filtering, we need to use $and to combine with search
+           
             if (query.$or) {
                 const priceConditions = query.$or;
-                query.$or = undefined; // Remove the existing $or
+                query.$or = undefined;
                 
                 query.$and = [
                     { $or: priceConditions },
@@ -198,7 +198,7 @@ const loadShopAll = async (req, res) => {
             
         const totalPages = Math.ceil(total / limit);
 
-        // Get min and max prices for the price range filter
+      
         const priceStats = await Product.aggregate([
             { $match: { isListed: true } },
             { $group: {
@@ -220,7 +220,7 @@ const loadShopAll = async (req, res) => {
             searchMessage = `Showing results for "${search}"`;
         }
 
-        // Add filter message
+    
         let filterMessage = '';
         if (categoryId || subcategory || minPrice !== '' || maxPrice !== '') {
             filterMessage = 'Filtered results';
@@ -343,6 +343,7 @@ const signup = async (req, res) => {
 
         const otp = generateOtp();
         const emailSent = await sendVerification({ email, otp });
+        console.log("otp sent: ",otp)
 
         if (!emailSent) {
             return res.render("signup", { message: "Failed to send OTP. Try again." });
@@ -352,7 +353,7 @@ const signup = async (req, res) => {
         req.session.otpTimestamp = Date.now();
         req.session.userData = { name, email, password };
 
-        console.log("OTP Sent:", otp);
+        
         return res.redirect("/verifyOTP");
     } catch (error) {
         console.error("Signup error:", error);
@@ -540,17 +541,968 @@ const loadProductDetail = async (req, res) => {
     }
 };
 
+const loadFootball = async (req, res) => {
+    try {
+        const user = req.session.user;
+        const sort = req.query.sort || 'alphabetical-asc';
+        const search = req.query.search || '';
+        const subcategory = req.query.subcategory || '';
+        const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : '';
+        const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        let sortOption;
+        switch (sort) {
+            case 'low-to-high':
+                sortOption = { salePrice: 1, regularPrice: 1 };
+                break;
+            case 'high-to-low':
+                sortOption = { salePrice: -1, regularPrice: -1 };
+                break;
+            case 'alphabetical-desc':
+                sortOption = { productName: -1 };
+                break;
+            case 'alphabetical-asc':
+            default:
+                sortOption = { productName: 1 };
+                break;
+        }
+
+       
+        const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+        
+       
+        const footballCategory = await Category.findOne({ 
+            name: { $regex: new RegExp('^football$', 'i') },
+            isListed: true 
+        });
+        
+        if (!footballCategory) {
+            return res.status(404).render("page-404", { message: "Football category not found" });
+        }
+        
+        const categoryId = footballCategory._id.toString();
+       
+        const subcategories = footballCategory.subcategories || [];
+    
+        const query = { isListed: true, category: categoryId };
+        
+       
+        if (subcategory) {
+            query.subcategory = subcategory;
+        }
+        
+
+        if (minPrice !== '' && maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice, $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice, $lte: maxPrice } }
+                    ]
+                }
+            ];
+        } else if (minPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice } }
+                    ]
+                }
+            ];
+        } else if (maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $lte: maxPrice } }
+                    ]
+                }
+            ];
+        }
+      
+      
+        if (search) {
+
+            if (query.$or) {
+                const priceConditions = query.$or;
+                query.$or = undefined;
+                
+                query.$and = [
+                    { $or: priceConditions },
+                    { $or: [
+                        { productName: { $regex: search, $options: 'i' } }, 
+                        { description: { $regex: search, $options: 'i' } }
+                    ]}
+                ];
+            } else {
+                query.$or = [
+                    { productName: { $regex: search, $options: 'i' } }, 
+                    { description: { $regex: search, $options: 'i' } }
+                ];
+            }
+        }
+
+        const total = await Product.countDocuments(query);
+        
+        const products = await Product.find(query)
+            .populate('category', 'name')
+            .sort(sortOption)
+            .skip(skip)
+            .limit(limit);
+            
+        const totalPages = Math.ceil(total / limit);
+
+        let priceStats = [];
+        try {
+            priceStats = await Product.aggregate([
+                { $match: { isListed: true, category: new mongoose.Types.ObjectId(categoryId) } },
+                { $group: {
+                    _id: null,
+                    minPrice: { $min: { $ifNull: ['$salePrice', '$regularPrice'] } },
+                    maxPrice: { $max: '$regularPrice' }
+                }}
+            ]);
+        } catch (error) {
+            console.error('Error in price aggregation:', error);
+           
+            const minPriceProduct = await Product.findOne({ isListed: true, category: categoryId })
+                .sort({ salePrice: 1, regularPrice: 1 });
+            const maxPriceProduct = await Product.findOne({ isListed: true, category: categoryId })
+                .sort({ regularPrice: -1 });
+            
+            if (minPriceProduct && maxPriceProduct) {
+                priceStats = [{
+                    minPrice: minPriceProduct.salePrice || minPriceProduct.regularPrice,
+                    maxPrice: maxPriceProduct.regularPrice
+                }];
+            }
+        }
+        
+        const priceRange = priceStats.length > 0 ? {
+            min: Math.floor(priceStats[0].minPrice),
+            max: Math.ceil(priceStats[0].maxPrice)
+        } : { min: 0, max: 1000 };
+     
+        let searchMessage = '';
+        if (search && products.length === 0) {
+            searchMessage = `No products found matching "${search}". Try a different search term.`;
+        } else if (search && products.length > 0) {
+            searchMessage = `Showing results for "${search}"`;
+        }
+
+        return res.render('football', {
+            user: user || null,
+            products,
+            categories,
+            subcategories,
+            currentPage: page,
+            totalPages,
+            sort,
+            search,
+            searchMessage,
+            categoryId,
+            subcategory,
+            minPrice: minPrice || '',
+            maxPrice: maxPrice || '',
+            priceRange,
+            category: footballCategory
+        });
+    } catch (error) {
+        console.error("Football page error:", error);
+        res.status(500).render("page-404", { message: "Server Error" });
+    }
+};
+
+const loadCricket = async (req, res) => {
+    try {
+        const user = req.session.user;
+        const sort = req.query.sort || 'alphabetical-asc';
+        const search = req.query.search || '';
+        const subcategory = req.query.subcategory || '';
+        const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : '';
+        const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        let sortOption;
+        switch (sort) {
+            case 'low-to-high':
+                sortOption = { salePrice: 1, regularPrice: 1 };
+                break;
+            case 'high-to-low':
+                sortOption = { salePrice: -1, regularPrice: -1 };
+                break;
+            case 'alphabetical-desc':
+                sortOption = { productName: -1 };
+                break;
+            case 'alphabetical-asc':
+            default:
+                sortOption = { productName: 1 };
+                break;
+        }
+
+       
+        const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+        
+       
+        const cricketCategory = await Category.findOne({ 
+            name: { $regex: new RegExp('^cricket$', 'i') },
+            isListed: true 
+        });
+        
+        if (!cricketCategory) {
+            return res.status(404).render("page-404", { message: "cricket category not found" });
+        }
+        
+        const categoryId = cricketCategory._id.toString();
+       
+        const subcategories = cricketCategory.subcategories || [];
+    
+        const query = { isListed: true, category: categoryId };
+        
+       
+        if (subcategory) {
+            query.subcategory = subcategory;
+        }
+        
+
+        if (minPrice !== '' && maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice, $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice, $lte: maxPrice } }
+                    ]
+                }
+            ];
+        } else if (minPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice } }
+                    ]
+                }
+            ];
+        } else if (maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $lte: maxPrice } }
+                    ]
+                }
+            ];
+        }
+      
+      
+        if (search) {
+
+            if (query.$or) {
+                const priceConditions = query.$or;
+                query.$or = undefined;
+                
+                query.$and = [
+                    { $or: priceConditions },
+                    { $or: [
+                        { productName: { $regex: search, $options: 'i' } }, 
+                        { description: { $regex: search, $options: 'i' } }
+                    ]}
+                ];
+            } else {
+                query.$or = [
+                    { productName: { $regex: search, $options: 'i' } }, 
+                    { description: { $regex: search, $options: 'i' } }
+                ];
+            }
+        }
+
+        const total = await Product.countDocuments(query);
+        
+        const products = await Product.find(query)
+            .populate('category', 'name')
+            .sort(sortOption)
+            .skip(skip)
+            .limit(limit);
+            
+        const totalPages = Math.ceil(total / limit);
+
+        let priceStats = [];
+        try {
+            priceStats = await Product.aggregate([
+                { $match: { isListed: true, category: new mongoose.Types.ObjectId(categoryId) } },
+                { $group: {
+                    _id: null,
+                    minPrice: { $min: { $ifNull: ['$salePrice', '$regularPrice'] } },
+                    maxPrice: { $max: '$regularPrice' }
+                }}
+            ]);
+        } catch (error) {
+            console.error('Error in price aggregation:', error);
+           
+            const minPriceProduct = await Product.findOne({ isListed: true, category: categoryId })
+                .sort({ salePrice: 1, regularPrice: 1 });
+            const maxPriceProduct = await Product.findOne({ isListed: true, category: categoryId })
+                .sort({ regularPrice: -1 });
+            
+            if (minPriceProduct && maxPriceProduct) {
+                priceStats = [{
+                    minPrice: minPriceProduct.salePrice || minPriceProduct.regularPrice,
+                    maxPrice: maxPriceProduct.regularPrice
+                }];
+            }
+        }
+        
+        const priceRange = priceStats.length > 0 ? {
+            min: Math.floor(priceStats[0].minPrice),
+            max: Math.ceil(priceStats[0].maxPrice)
+        } : { min: 0, max: 1000 };
+     
+        let searchMessage = '';
+        if (search && products.length === 0) {
+            searchMessage = `No products found matching "${search}". Try a different search term.`;
+        } else if (search && products.length > 0) {
+            searchMessage = `Showing results for "${search}"`;
+        }
+
+        return res.render('cricket', {
+            user: user || null,
+            products,
+            categories,
+            subcategories,
+            currentPage: page,
+            totalPages,
+            sort,
+            search,
+            searchMessage,
+            categoryId,
+            subcategory,
+            minPrice: minPrice || '',
+            maxPrice: maxPrice || '',
+            priceRange,
+            category: cricketCategory
+        });
+    } catch (error) {
+        console.error("Cricket page error:", error);
+        res.status(500).render("page-404", { message: "Server Error" });
+    }
+};
+const loadBasketball = async (req, res) => {
+    try {
+        const user = req.session.user;
+        const sort = req.query.sort || 'alphabetical-asc';
+        const search = req.query.search || '';
+        const subcategory = req.query.subcategory || '';
+        const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : '';
+        const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        let sortOption;
+        switch (sort) {
+            case 'low-to-high':
+                sortOption = { salePrice: 1, regularPrice: 1 };
+                break;
+            case 'high-to-low':
+                sortOption = { salePrice: -1, regularPrice: -1 };
+                break;
+            case 'alphabetical-desc':
+                sortOption = { productName: -1 };
+                break;
+            case 'alphabetical-asc':
+            default:
+                sortOption = { productName: 1 };
+                break;
+        }
+
+       
+        const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+        
+       
+        const basketballCategory = await Category.findOne({ 
+            name: { $regex: new RegExp('^basketball$', 'i') },
+            isListed: true 
+        });
+        
+        if (!basketballCategory) {
+            return res.status(404).render("page-404", { message: "basketball category not found" });
+        }
+        
+        const categoryId = basketballCategory._id.toString();
+       
+        const subcategories = basketballCategory.subcategories || [];
+    
+        const query = { isListed: true, category: categoryId };
+        
+       
+        if (subcategory) {
+            query.subcategory = subcategory;
+        }
+        
+
+        if (minPrice !== '' && maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice, $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice, $lte: maxPrice } }
+                    ]
+                }
+            ];
+        } else if (minPrice !== '') {
+            query.$or = [
+                { salePrice: { $gte: minPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $gte: minPrice } }
+                    ]
+                }
+            ];
+        } else if (maxPrice !== '') {
+            query.$or = [
+                { salePrice: { $lte: maxPrice } },
+                { 
+                    $and: [
+                        { salePrice: { $exists: false } },
+                        { regularPrice: { $lte: maxPrice } }
+                    ]
+                }
+            ];
+        }
+      
+      
+        if (search) {
+
+            if (query.$or) {
+                const priceConditions = query.$or;
+                query.$or = undefined;
+                
+                query.$and = [
+                    { $or: priceConditions },
+                    { $or: [
+                        { productName: { $regex: search, $options: 'i' } }, 
+                        { description: { $regex: search, $options: 'i' } }
+                    ]}
+                ];
+            } else {
+                query.$or = [
+                    { productName: { $regex: search, $options: 'i' } }, 
+                    { description: { $regex: search, $options: 'i' } }
+                ];
+            }
+        }
+
+        const total = await Product.countDocuments(query);
+        
+        const products = await Product.find(query)
+            .populate('category', 'name')
+            .sort(sortOption)
+            .skip(skip)
+            .limit(limit);
+            
+        const totalPages = Math.ceil(total / limit);
+
+        let priceStats = [];
+        try {
+            priceStats = await Product.aggregate([
+                { $match: { isListed: true, category: new mongoose.Types.ObjectId(categoryId) } },
+                { $group: {
+                    _id: null,
+                    minPrice: { $min: { $ifNull: ['$salePrice', '$regularPrice'] } },
+                    maxPrice: { $max: '$regularPrice' }
+                }}
+            ]);
+        } catch (error) {
+            console.error('Error in price aggregation:', error);
+           
+            const minPriceProduct = await Product.findOne({ isListed: true, category: categoryId })
+                .sort({ salePrice: 1, regularPrice: 1 });
+            const maxPriceProduct = await Product.findOne({ isListed: true, category: categoryId })
+                .sort({ regularPrice: -1 });
+            
+            if (minPriceProduct && maxPriceProduct) {
+                priceStats = [{
+                    minPrice: minPriceProduct.salePrice || minPriceProduct.regularPrice,
+                    maxPrice: maxPriceProduct.regularPrice
+                }];
+            }
+        }
+        
+        const priceRange = priceStats.length > 0 ? {
+            min: Math.floor(priceStats[0].minPrice),
+            max: Math.ceil(priceStats[0].maxPrice)
+        } : { min: 0, max: 1000 };
+     
+        let searchMessage = '';
+        if (search && products.length === 0) {
+            searchMessage = `No products found matching "${search}". Try a different search term.`;
+        } else if (search && products.length > 0) {
+            searchMessage = `Showing results for "${search}"`;
+        }
+
+        return res.render('basketball', {
+            user: user || null,
+            products,
+            categories,
+            subcategories,
+            currentPage: page,
+            totalPages,
+            sort,
+            search,
+            searchMessage,
+            categoryId,
+            subcategory,
+            minPrice: minPrice || '',
+            maxPrice: maxPrice || '',
+            priceRange,
+            category: basketballCategory
+        });
+    } catch (error) {
+        console.error("basketballpage error:", error);
+        res.status(500).render("page-404", { message: "Server Error" });
+    }
+};
+
+
+
+
+const loadProfile = async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const userId = req.session.user._id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.redirect('/login');
+        }
+
+        // Fetch addresses from the Address model
+        const addresses = await Address.find({ userId: userId }).sort({ isDefault: -1, createdAt: -1 });
+
+        res.render('profile', {
+            user,
+            addresses,
+            activeTab: req.query.tab || 'details'
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// Profile-related functions moved to profileController.js
+
+const loadForgotPassword = (req, res) => {
+    try {
+        res.render('forgot-password', { error: null, success: null });
+    } catch (error) {
+        console.error('Error loading forgot password page:', error);
+        res.status(500).render('page-404', { message: 'Server Error' });
+    }
+};
+
+const sendResetOTP = async (req, res) => {
+    try {
+        console.log('=== Send Reset OTP Debug Info ===');
+        console.log('1. Raw Request Body:', req.body);
+     
+        let email = '';
+        try {
+            email = String(req.body.email || '').trim().toLowerCase();
+        } catch (err) {
+            console.error('Error normalizing email:', err);
+            return res.render('forgot-password', { 
+                error: 'Invalid email format', 
+                success: null 
+            });
+        }
+        
+        console.log('2. Normalized Email:', email);
+        
+        if (!email) {
+            return res.render('forgot-password', { 
+                error: 'Email is required', 
+                success: null 
+            });
+        }
+     
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.render('forgot-password', { 
+                error: 'No account found with that email address', 
+                success: null 
+            });
+        }
+
+    
+        if (user.googleId && !user.password) {
+            return res.render('forgot-password', { 
+                error: 'This account uses Google authentication. Please sign in with Google.', 
+                success: null 
+            });
+        }
+        
+   
+        const otp = generateOtp();
+        console.log('3. Generated OTP:', otp);
+        
+       
+        req.session.resetPasswordOtp = {
+            email, 
+            otp: String(otp),
+            expiresAt: Date.now() + 10 * 60 * 1000 
+        };
+        
+       
+        await new Promise((resolve, reject) => {
+            req.session.save(err => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        console.log('4. Session Data:', req.session.resetPasswordOtp);
+        
+      
+        await sendVerification({ email, otp: String(otp) });
+        
+      
+        res.render('reset-password-otp', { 
+            email,
+            error: null 
+        });
+        
+    } catch (error) {
+        console.error('Error sending reset OTP:', error);
+        res.render('forgot-password', { 
+            error: 'An error occurred while sending the OTP. Please try again.', 
+            success: null 
+        });
+    }
+};
+
+const loadResetPasswordOTP = (req, res) => {
+    try {
+        if (!req.session.resetPasswordOtp) {
+            return res.redirect('/forgot-password');
+        }
+        
+        res.render('reset-password-otp', { 
+            email: req.session.resetPasswordOtp.email,
+            error: null 
+        });
+    } catch (error) {
+        console.error('Error loading reset password OTP page:', error);
+        res.status(500).render('page-404', { message: 'Server Error' });
+    }
+};
+
+const verifyResetOTP = async (req, res) => {
+    try {
+        console.log('=== OTP Verification Debug Info ===');
+        console.log('1. Raw Request Body:', JSON.stringify(req.body));
+        
+        const rawEmail = req.body.email;
+        const rawOtp = req.body.otp;
+        
+        console.log('2. Raw Values:');
+        console.log('   Email:', rawEmail);
+        console.log('   OTP:', rawOtp);
+        
+  
+        if (!rawEmail || !rawOtp) {
+       
+            return res.render('reset-password-otp', { 
+                email: rawEmail || '', 
+                error: 'Email and OTP are required.' 
+            });
+        }
+        
+       
+        let email, otp;
+        try {
+            email = String(rawEmail).trim().toLowerCase();
+            otp = String(rawOtp).trim();
+        } catch (err) {
+            console.error('Error converting input to string:', err);
+            return res.render('reset-password-otp', { 
+                email: rawEmail || '', 
+                error: 'Invalid input format' 
+            });
+        }
+        
+        console.log('3. Normalized Values:');
+        console.log('   Email:', email);
+        console.log('   OTP:', otp);
+        
+      
+        console.log('4. Session State:');
+        console.log('   Full Session:', req.session);
+        console.log('   Reset Password OTP:', req.session.resetPasswordOtp);
+        
+   
+        if (!req.session.resetPasswordOtp) {
+            return res.render('reset-password-otp', { 
+                email, 
+                error: 'OTP session expired. Please request a new OTP.' 
+            });
+        }
+        
+    
+        const sessionEmail = req.session.resetPasswordOtp.email;
+        const sessionOtp = req.session.resetPasswordOtp.otp;
+        
+        console.log('5. Session Values:');
+        console.log('   Session Email:', sessionEmail);
+        console.log('   Session OTP:', sessionOtp);
+        
+
+        let normalizedSessionEmail, normalizedSessionOtp;
+        try {
+            normalizedSessionEmail = String(sessionEmail).trim().toLowerCase();
+            normalizedSessionOtp = String(sessionOtp).trim();
+        } catch (err) {
+            console.error('Error normalizing session data:', err);
+            return res.render('reset-password-otp', { 
+                email, 
+                error: 'Session data is invalid. Please request a new OTP.' 
+            });
+        }
+        
+        console.log('6. Comparison:');
+        console.log('   Normalized Session Email:', normalizedSessionEmail);
+        console.log('   Normalized Input Email:', email);
+        console.log('   Normalized Session OTP:', normalizedSessionOtp);
+        console.log('   Normalized Input OTP:', otp);
+        
+      
+        if (normalizedSessionEmail !== email) {
+            console.log(' Email Mismatch');
+            return res.render('reset-password-otp', { 
+                email, 
+                error: 'Email mismatch. Please request a new OTP.' 
+            });
+        }
+        
+     
+        if (Date.now() > req.session.resetPasswordOtp.expiresAt) {
+            console.log(' OTP Expired');
+            console.log('   Current Time:', Date.now());
+            console.log('   Expiry Time:', req.session.resetPasswordOtp.expiresAt);
+            return res.render('reset-password-otp', { 
+                email, 
+                error: 'OTP has expired. Please request a new OTP.' 
+            });
+        }
+        
+  
+        if (normalizedSessionOtp !== otp) {
+            console.log(' OTP Mismatch');
+            return res.render('reset-password-otp', { 
+                email, 
+                error: 'Invalid OTP. Please try again.' 
+            });
+        }
+        
+        console.log(' Verification Successful');
+   
+        const token = require('crypto').randomBytes(32).toString('hex');
+        
+        req.session.resetPasswordToken = {
+            email, 
+            token,
+            expiresAt: Date.now() + 30 * 60 * 1000 
+        };
+        
+   
+        delete req.session.resetPasswordOtp;
+        
+       
+        await new Promise((resolve, reject) => {
+            req.session.save(err => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+    
+        res.render('reset-password', { 
+            email, 
+            token, 
+            error: null 
+        });
+        
+    } catch (error) {
+        console.error('Error verifying reset OTP:', error);
+        res.render('reset-password-otp', { 
+            email: req.body.email, 
+            error: 'An error occurred while verifying the OTP. Please try again.' 
+        });
+    }
+};
+
+const resendResetOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.render('forgot-password', { 
+                error: 'No account found with that email address', 
+                success: null 
+            });
+        }
+        
+       
+        const otp = generateOtp();
+        
+       
+        req.session.resetPasswordOtp = {
+            email,
+            otp,
+            expiresAt: Date.now() + 10 * 60 * 1000 
+        };
+        
+    
+        await sendVerification({ email, otp });
+        
+       
+        res.render('reset-password-otp', { 
+            email, 
+            error: 'A new OTP has been sent to your email address.' 
+        });
+        
+    } catch (error) {
+        console.error('Error resending reset OTP:', error);
+        res.render('reset-password-otp', { 
+            email: req.body.email, 
+            error: 'An error occurred while resending the OTP. Please try again.' 
+        });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { email, token, newPassword, confirmPassword } = req.body;
+        
+       
+        if (!req.session.resetPasswordToken) {
+            return res.render('reset-password', { 
+                email, 
+                token, 
+                error: 'Password reset session expired. Please request a new OTP.' 
+            });
+        }
+        
+    
+        if (req.session.resetPasswordToken.email !== email || req.session.resetPasswordToken.token !== token) {
+            return res.render('reset-password', { 
+                email, 
+                token, 
+                error: 'Invalid reset request. Please request a new OTP.' 
+            });
+        }
+        
+      
+        if (Date.now() > req.session.resetPasswordToken.expiresAt) {
+            return res.render('reset-password', { 
+                email, 
+                token, 
+                error: 'Reset token has expired. Please request a new OTP.' 
+            });
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.render('reset-password', { 
+                email, 
+                token, 
+                error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' 
+            });
+        }
+        
+       
+        if (newPassword !== confirmPassword) {
+            return res.render('reset-password', { 
+                email, 
+                token, 
+                error: 'Passwords do not match' 
+            });
+        }
+        
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.render('reset-password', { 
+                email, 
+                token, 
+                error: 'User not found. Please request a new OTP.' 
+            });
+        }
+        
+     
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+
+        await User.findByIdAndUpdate(user._id, { password: hashedPassword });
+        
+    
+        delete req.session.resetPasswordOtp;
+        delete req.session.resetPasswordToken;
+        
+  
+        res.render('login', { 
+            message: 'Password has been reset successfully. Please login with your new password.',
+            error_msg: null
+        });
+        
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.render('reset-password', { 
+            email: req.body.email, 
+            token: req.body.token, 
+            error: 'An error occurred while resetting your password. Please try again.' 
+        });
+    }
+};
+
 module.exports = {
     loadHomepage,
     loadLogin,
     loadSignUp,
+    loadForgotPassword,
+    sendResetOTP,
+    loadResetPasswordOTP,
+    verifyResetOTP,
+    resendResetOTP,
+    resetPassword,
     loadVerifyOTP,
     loadPageNotFound,
-    loadShopAll,
-    loadProductDetail,
     signup,
-    login,
     verifyOTP,
     resendOTP,
-    logout
+    login,
+    logout,
+    loadProductDetail,
+    loadShopAll,
+    loadFootball,
+    loadCricket,
+    loadBasketball
 };

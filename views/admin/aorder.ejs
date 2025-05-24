@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Management – Prime.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      .pagination-btn {
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        border: 1px solid #e5e7eb;
+      }
+      .pagination-btn.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      .pagination-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+    <div class="flex flex-1">
+      <%- include("../partials/admin/_sidebar") %>
+
+      <div class="flex-1 flex flex-col">
+        <%- include("../partials/admin/_header") %>
+        
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-semibold">Order Management</h1>
+            <div class="flex space-x-2">
+              <!-- Search Form -->
+              <form action="/admin/orders" method="GET" class="flex">
+                <input 
+                  type="text" 
+                  name="search" 
+                  value="<%= searchQuery %>" 
+                  placeholder="Search by Order ID" 
+                  class="border rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600">
+                  <i class="fas fa-search"></i>
+                </button>
+                <% if (searchQuery) { %>
+                  <a href="/admin/orders" class="ml-2 bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">
+                    Clear
+                  </a>
+                <% } %>
+              </form>
+            </div>
+          </div>
+          
+          <!-- Orders Table -->
+          <div class="bg-white rounded-lg shadow overflow-hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Order ID
+                    <a href="/admin/orders?sortField=orderNumber&sortOrder=<%= sortField === 'orderNumber' && sortOrder === 'asc' ? 'desc' : 'asc' %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %>" class="ml-1">
+                      <i class="fas fa-sort text-gray-400"></i>
+                    </a>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                    <a href="/admin/orders?sortField=createdAt&sortOrder=<%= sortField === 'createdAt' && sortOrder === 'asc' ? 'desc' : 'asc' %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %>" class="ml-1">
+                      <i class="fas fa-sort text-gray-400"></i>
+                    </a>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customers
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    username
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                    <a href="/admin/orders?sortField=total&sortOrder=<%= sortField === 'total' && sortOrder === 'asc' ? 'desc' : 'asc' %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %>" class="ml-1">
+                      <i class="fas fa-sort text-gray-400"></i>
+                    </a>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                    <a href="/admin/orders?sortField=orderStatus&sortOrder=<%= sortField === 'orderStatus' && sortOrder === 'asc' ? 'desc' : 'asc' %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %>" class="ml-1">
+                      <i class="fas fa-sort text-gray-400"></i>
+                    </a>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <% if (orders && orders.length > 0) { %>
+                  <% orders.forEach(order => { %>
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <%= order.orderNumber %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <%= new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <% if (order.user) { %>
+                          <span class="text-xs text-green-400"><%= order.user.email %></span>
+                        <% } else { %>
+                          <p>User not found</p>
+                        <% } %>
+                      </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <% if (order.user) { %>
+                          <span class="text-xs text-green-400 uppercase"><%= order.user.name %></span>
+                        <% } else { %>
+                          <p>User not found</p>
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ₹<%= order.total ? order.total.toFixed(2) : '0.00' %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <% 
+                          let statusClass = '';
+                          switch(order.orderStatus) {
+                            case 'Placed':
+                              statusClass = 'bg-blue-100 text-blue-800';
+                              break;
+                            case 'Processing':
+                              statusClass = 'bg-yellow-100 text-yellow-800';
+                              break;
+                            case 'Shipped':
+                              statusClass = 'bg-indigo-100 text-indigo-800';
+                              break;
+                            case 'Out for Delivery':
+                              statusClass = 'bg-purple-100 text-purple-800';
+                              break;
+                            case 'Delivered':
+                              statusClass = 'bg-green-100 text-green-800';
+                              break;
+                            case 'Cancelled':
+                              statusClass = 'bg-red-100 text-red-800';
+                              break;
+                            case 'Returned':
+                              statusClass = 'bg-orange-100 text-orange-800';
+                              break;
+                            default:
+                              statusClass = 'bg-gray-100 text-gray-800';
+                          }
+                        %>
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= statusClass %>">
+                          <%= order.orderStatus %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="/admin/orders/<%= order._id %>" class="text-blue-600 hover:text-blue-900 mr-3">
+                          <i class="fas fa-eye"></i> View
+                        </a>
+                        <% if (order.orderStatus === 'Returned') { %>
+                          <button 
+                            onclick="verifyReturn('<%= order._id %>')" 
+                            class="text-green-600 hover:text-green-900"
+                          >
+                            <i class="fas fa-check-circle"></i> Verify Return
+                          </button>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                      No orders found
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+          
+          
+          <% if (totalPages > 1) { %>
+            <div class="flex justify-between items-center mt-6">
+              <div class="text-sm text-gray-500">
+                Showing <%= (currentPage - 1) * limit + 1 %> to <%= Math.min(currentPage * limit, totalOrders) %> of <%= totalOrders %> orders
+              </div>
+              <div class="flex space-x-2">
+                <% if (currentPage > 1) { %>
+                  <a href="/admin/orders?page=<%= currentPage - 1 %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %><%= sortField && sortOrder ? `&sortField=${sortField}&sortOrder=${sortOrder}` : '' %>" class="pagination-btn">
+                    Previous
+                  </a>
+                <% } else { %>
+                  <button disabled class="pagination-btn disabled">Previous</button>
+                <% } %>
+                
+                <% for(let i = 1; i <= totalPages; i++) { %>
+                  <% if (i === currentPage) { %>
+                    <span class="pagination-btn active"><%= i %></span>
+                  <% } else if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) { %>
+                    <a href="/admin/orders?page=<%= i %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %><%= sortField && sortOrder ? `&sortField=${sortField}&sortOrder=${sortOrder}` : '' %>" class="pagination-btn">
+                      <%= i %>
+                    </a>
+                  <% } else if (i === currentPage - 2 || i === currentPage + 2) { %>
+                    <span class="px-3 py-1">...</span>
+                  <% } %>
+                <% } %>
+                
+                <% if (currentPage < totalPages) { %>
+                  <a href="/admin/orders?page=<%= currentPage + 1 %><%= searchQuery ? `&search=${searchQuery}` : '' %><%= statusFilter ? `&status=${statusFilter}` : '' %><%= sortField && sortOrder ? `&sortField=${sortField}&sortOrder=${sortOrder}` : '' %>" class="pagination-btn">
+                    Next
+                  </a>
+                <% } else { %>
+                  <button disabled class="pagination-btn disabled">Next</button>
+                <% } %>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    
+    <div id="returnModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 class="text-xl font-semibold mb-4">Verify Return Request</h2>
+        <p class="mb-4">Do you want to approve or reject this return request?</p>
+        <p class="text-sm text-gray-500 mb-4">Approving will refund the amount to the customer's wallet.</p>
+        <div class="flex justify-end space-x-3">
+          <button onclick="closeReturnModal()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">
+            Cancel
+          </button>
+          <button onclick="rejectReturn()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+            Reject
+          </button>
+          <button onclick="approveReturn()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+            Approve
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentOrderId = null;
+      
+      function verifyReturn(orderId) {
+        currentOrderId = orderId;
+        document.getElementById('returnModal').classList.remove('hidden');
+      }
+      
+      function closeReturnModal() {
+        document.getElementById('returnModal').classList.add('hidden');
+        currentOrderId = null;
+      }
+      
+      function approveReturn() {
+        if (!currentOrderId) return;
+        
+        fetch('/admin/orders/verify-return', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            orderId: currentOrderId,
+            action: 'approve'
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message || 'Failed to approve return');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your request');
+        })
+        .finally(() => {
+          closeReturnModal();
+        });
+      }
+      
+      function rejectReturn() {
+        if (!currentOrderId) return;
+        
+        fetch('/admin/orders/verify-return', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            orderId: currentOrderId,
+            action: 'reject'
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message || 'Failed to reject return');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your request');
+        })
+        .finally(() => {
+          closeReturnModal();
+        });
+      }
+    </script>
+  </body>
+</html>

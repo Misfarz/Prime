@@ -44,8 +44,11 @@ const customerInfo = async (req, res) => {
 const customerBlocked = async (req, res,next) => {
     try {
         let id=req.query.id;
+        
         await User.updateOne({_id:id},{$set:{isBlocked:true}});
+        
         res.redirect("/admin/customers")
+        
     } catch (error) {
       console.error("block error",error)
     }

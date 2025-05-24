@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Prime Jersey - Authentic Sports Jerseys</title>
+  <title>Prime.</title>
   <meta name="description" content="Shop authentic NBA, Football, and Cricket jerseys at Prime Jersey. Official merchandise with fast shipping and easy returns.">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
       background: url('/images/ft-img.png') center/cover no-repeat;
     }
 
-    /* Consistent Product Cards */
+    
     .product-card {
       background-color: white;
       border-radius: 0;
@@ -71,11 +71,31 @@
       object-fit: cover;
       transition: opacity 0.3s ease;
     }
+    
+    .wishlist-btn {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background-color: white;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: all 0.2s ease;
+    }
+    
+    .wishlist-btn:hover {
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body class="text-gray-900">
   <%- include("../../views/partials/user/header") %>
-
+    
   <!-- Hero Section -->
   <section class="hero-bg h-[90vh] flex items-center text-white">
     <div class="max-w-7xl mx-auto px-6 py-10 w-full">
@@ -93,15 +113,12 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
       <% if (categories && categories.length > 0) { %>
         <% categories.forEach(category => { %>
-          <a href="/category/<%= category.slug %>" class="category-card group relative overflow-hidden h-80 rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+          <a href="/<%= category.name %>" class="category-card group relative overflow-hidden h-80 rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
             <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div>
             <img src="<%= category.image %>" 
                  alt="<%= category.name %>" 
                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
             <div class="absolute bottom-0 left-0 z-20 p-6 w-full">
-              <div class="flex items-center justify-center w-14 h-14 bg-white rounded-full mb-3 mx-auto group-hover:bg-blue-600 transition-colors duration-300">
-                <i class="fas fa-basketball-ball text-xl text-gray-700 group-hover:text-white transition-colors"></i>
-              </div>
               <h3 class="text-xl font-medium text-white text-center mb-1"><%= category.name %></h3>
               <p class="text-sm text-gray-200 text-center"><%= category.description %></p>
             </div>
@@ -111,28 +128,19 @@
         <p class="col-span-3 text-center text-gray-500">No categories available.</p>
       <% } %>
     </div>
-
-    <div class="text-center mt-12">
-      <a href="/categories" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors">
-        View all categories
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </a>
-    </div>
   </div>
 </section>
 
 
 
 
-  <!-- Featured Section - Improved Consistency -->
   <section id="featured" class="py-16 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-3xl font-light mb-3 tracking-tight">Featured Jerseys</h2>
         <p class="text-gray-500 max-w-2xl mx-auto">Authentic jerseys worn by professional athletes</p>
       </div>
+      
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
         <% if (featuredProducts && featuredProducts.length > 0) { %>
@@ -184,7 +192,7 @@
     </div>
   </section>
 
-  <!-- Why Prime Section - Enhanced -->
+
   <section class="py-16 bg-white">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-12">
@@ -220,7 +228,7 @@
     </div>
   </section>
 
-  <!-- New Arrivals Section - Consistent with Featured -->
+  
   <section id="new-arrivals" class="py-16 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-12">
@@ -248,7 +256,7 @@
                         $<%= product.salePrice || product.regularPrice %>
                       </span>
                       <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
+                        <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
                     <% 
@@ -278,7 +286,7 @@
     </div>
   </section>
 
-  <!-- Promo Section -->
+
   <section class="ft-bg h-[100vh] flex items-center text-white font-sans">
     <div class="max-w-7xl mx-auto px-6 py-10 w-full">
       <h2 class="text-4xl font-semibold text-white mb-4 tracking-tight">Supernova Rise 2</h2>
@@ -312,5 +320,13 @@
       });
     });
   </script>
+  <script src="/js/wishlist.js"></script>
+  <script>
+    
+    window.userWishlist = JSON.parse('<%= JSON.stringify(user && user.whishlist ? user.whishlist.map(item => item.toString()) : []) %>');
+  </script>
+  <script src="/js/add-wishlist-buttons.js"></script>
+
+
 </body>
 </html>

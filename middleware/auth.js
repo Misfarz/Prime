@@ -25,7 +25,31 @@ const adminAuth = (req,res,next) => {
 
 }
 
+const userAuth = (req, res, next) => {
+    if(req.session.user){
+        User.findById(req.session.user)
+        .then((data) => {
+            if(data && !data.isBlocked){
+              
+                res.locals.userData = data;
+                next()
+            }
+            else{
+                req.session.destroy();
+                res.redirect("/login")
+            }
+        })
+        .catch((error) => {
+            console.log("Error in UserAuth middleware", error);
+            res.status(500).send("Internal server error")
+        })
+    }
+    else{
+        res.redirect("/login")
+    }
+}
 
 module.exports = {
-    adminAuth
+    adminAuth,
+    userAuth
 }

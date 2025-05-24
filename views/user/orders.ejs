@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Orders - Prime</title>
+  <meta name="description" content="View and manage your orders at Prime.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      scroll-behavior: smooth;
+      background-color: #fafafa;
+    }
+  </style>
+</head>
+<body>
+
+<%- include('../partials/user/header') %>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">My Orders</h1>
+        
+        <div class="flex flex-col md:flex-row gap-6">
+       
+            <div class="w-full md:w-1/4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 border-b border-gray-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-200">
+                                <img src="<%= user.profileImage || '/images/default-profile.png' %>" alt="Profile" class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <h3 class="font-medium"><%= user.name %></h3>
+                                <p class="text-xs text-gray-500"><%= user.email %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="p-2">
+                        <a href="/profile?tab=details" class="block px-3 py-2 rounded-md text-sm <%= activeTab === 'details' ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50' %>">
+                            Account Details
+                        </a>
+                        <a href="/profile?tab=addresses" class="block px-3 py-2 rounded-md text-sm <%= activeTab === 'addresses' ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50' %>">
+                            Addresses
+                        </a>
+                        <a href="/profile?tab=orders" class="block px-3 py-2 rounded-md text-sm <%= activeTab === 'orders' ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50' %>">
+                            Orders
+                        </a>
+                        <% if (user.googleId) { %>
+                        <a href="https://myaccount.google.com/" target="_blank" class="block px-3 py-2 rounded-md text-sm hover:bg-gray-50">
+                            <i class="fab fa-google mr-1"></i> Manage Google Account
+                        </a>
+                        <% } else { %>
+                        <a href="/profile/change-password" class="block px-3 py-2 rounded-md text-sm hover:bg-gray-50">
+                            Change Password
+                        </a>
+                        <% } %>
+                        <form action="/logout" method="GET" class="mt-2 border-t border-gray-100 pt-2">
+                            <button type="submit" class="w-full text-left px-3 py-2 rounded-md text-sm text-red-600 hover:bg-gray-50">
+                                Logout
+                            </button>
+                        </form>
+                    </nav>
+                </div>
+            </div>
+            
+           
+            <div class="w-full md:w-3/4">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 class="text-xl font-semibold">My Orders</h2>
+                        
+                    
+                        <form action="/orders" method="GET" class="flex w-full md:w-auto">
+                            <div class="relative flex-grow">
+                                <input 
+                                    type="text" 
+                                    name="search" 
+                                    placeholder="Search by order ID" 
+                                    value="<%= searchQuery %>"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                <button type="submit" class="absolute right-0 top-0 h-full px-3 text-gray-500">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <% if (searchQuery) { %>
+                                <a href="/orders" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-r-md hover:bg-gray-300 transition">
+                                    Clear
+                                </a>
+                            <% } %>
+                        </form>
+                    </div>
+                    
+                    <% if (orders && orders.length > 0) { %>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <% orders.forEach(order => { %>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900"><%= order.orderNumber %></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-500"><%= new Date(order.createdAt).toLocaleDateString() %></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <% 
+                                                let statusColor = '';
+                                                switch(order.orderStatus) {
+                                                    case 'Placed':
+                                                        statusColor = 'bg-blue-100 text-blue-800';
+                                                        break;
+                                                    case 'Processing':
+                                                        statusColor = 'bg-yellow-100 text-yellow-800';
+                                                        break;
+                                                    case 'Shipped':
+                                                        statusColor = 'bg-indigo-100 text-indigo-800';
+                                                        break;
+                                                    case 'Delivered':
+                                                        statusColor = 'bg-green-100 text-green-800';
+                                                        break;
+                                                    case 'Cancelled':
+                                                    case 'Partially Cancelled':
+                                                        statusColor = 'bg-red-100 text-red-800';
+                                                        break;
+                                                    case 'Returned':
+                                                    case 'Partially Returned':
+                                                        statusColor = 'bg-orange-100 text-orange-800';
+                                                        break;
+                                                    default:
+                                                        statusColor = 'bg-gray-100 text-gray-800';
+                                                }
+                                                %>
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= statusColor %>">
+                                                    <%= order.orderStatus %>
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">₹<%= order.total.toFixed(2) %></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <div class="flex space-x-2">
+                                                    <a href="/orders/<%= order._id %>" class="text-blue-600 hover:text-blue-900">
+                                                        View
+                                                    </a>
+                                                    <% if (order.invoiceUrl) { %>
+                                                        <a href="/orders/<%= order._id %>/invoice" class="text-green-600 hover:text-green-900">
+                                                            Invoice
+                                                        </a>
+                                                    <% } else { %>
+                                                        <a href="/orders/<%= order._id %>/invoice" class="text-green-600 hover:text-green-900">
+                                                            Generate Invoice
+                                                        </a>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        
+                        <% if (totalPages > 1) { %>
+                            <div class="flex justify-center mt-6">
+                                <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <% if (currentPage > 1) { %>
+                                        <a href="/orders?page=<%= currentPage - 1 %><%= searchQuery ? `&search=${searchQuery}` : '' %>" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <span class="sr-only">Previous</span>
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                            <span class="sr-only">Previous</span>
+                                            <i class="fas fa-chevron-left"></i>
+                                        </span>
+                                    <% } %>
+                                    
+                                    <% for(let i = 1; i <= totalPages; i++) { %>
+                                        <% if (i === currentPage) { %>
+                                            <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                                                <%= i %>
+                                            </span>
+                                        <% } else { %>
+                                            <a href="/orders?page=<%= i %><%= searchQuery ? `&search=${searchQuery}` : '' %>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                <%= i %>
+                                            </a>
+                                        <% } %>
+                                    <% } %>
+                                    
+                                    <% if (currentPage < totalPages) { %>
+                                        <a href="/orders?page=<%= currentPage + 1 %><%= searchQuery ? `&search=${searchQuery}` : '' %>" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <span class="sr-only">Next</span>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                            <span class="sr-only">Next</span>
+                                            <i class="fas fa-chevron-right"></i>
+                                        </span>
+                                    <% } %>
+                                </nav>
+                            </div>
+                        <% } %>
+                    <% } else { %>
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-shopping-bag text-gray-400 text-xl"></i>
+                            </div>
+                            <% if (searchQuery) { %>
+                                <p class="text-gray-500 mb-4">No orders found matching "<%= searchQuery %>"</p>
+                                <a href="/orders" class="px-4 py-2 bg-gray-800 text-white text-sm rounded-md hover:bg-gray-700 transition">
+                                    View All Orders
+                                </a>
+                            <% } else { %>
+                                <p class="text-gray-500 mb-4">You haven't placed any orders yet</p>
+                                <a href="/shopall" class="px-4 py-2 bg-gray-800 text-white text-sm rounded-md hover:bg-gray-700 transition">
+                                    Start Shopping
+                                </a>
+                            <% } %>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/user/footer') %>
+
+</body>
+</html>

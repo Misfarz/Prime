@@ -42,6 +42,15 @@ const userSchema = mongoose.Schema({
         default:false
     },
     
+    profileImage: {
+        type: String,
+        default: '/images/default-profile.png'
+    },
+    addresses: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Address'
+    }],
+
     cart : {
         type:mongoose.Schema.Types.ObjectId,
         ref:"Cart"
@@ -52,11 +61,8 @@ const userSchema = mongoose.Schema({
         default:0
     },
     whishlist: [{
-       
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Wishlist"
-
-
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product"
     }],
 
     orderHistory:[

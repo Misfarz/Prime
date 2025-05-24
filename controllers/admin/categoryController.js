@@ -28,6 +28,17 @@ exports.saveCategory = async (req, res) => {
 
         let subcats = subcategories ? subcategories.split(',').map(s => s.trim()).filter(s => s) : [];
 
+        const existingCategoryName = await Category.findOne({
+      name: { $regex: new RegExp(`^${name}$`, "i") },
+      _id:{$ne:categoryId}
+    });
+
+
+
+    if (existingCategoryName) {
+      return res.status(400).send("category already exists");
+    }
+
         if (categoryId) {
         
             const updateData = { name, description, subcategories: subcats };

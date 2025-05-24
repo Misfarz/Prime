@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prime. NewArrivals</title>
+</head>
+<body>
+
+    <section id="new-arrivals" class="py-16 bg-[#fafafa]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-light mb-3 tracking-tight">New Arrivals</h2>
+        <p class="text-gray-500 max-w-2xl mx-auto">Latest additions to our premium collection</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
+        <% if (newProducts && newProducts.length > 0) { %>
+          <% newProducts.forEach(product => { %>
+            <a href="/product/<%= product._id %>" class="group" aria-label="<%= product.productName %>">
+              <div class="product-card">
+                <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                  <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
+                <% } %>
+                <div class="product-image-container">
+                  <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>"
+                       class="product-image group-hover:opacity-90">
+                </div>
+                <div class="p-4 flex flex-col flex-grow">
+                  <h3 class="text-md font-medium text-gray-900 mb-1"><%= product.productName %></h3>
+                  <div class="flex justify-between items-center mt-3">
+                    <div>
+                      <span class="text-sm font-medium text-gray-900">
+                        $<%= product.salePrice || product.regularPrice %>
+                      </span>
+                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
+                      <% } %>
+                    </div>
+                    <% 
+                      let totalStock = 0;
+                      if (product.sizes && product.sizes.length > 0) {
+                        product.sizes.forEach(size => {
+                          totalStock += size.quantity || 0;
+                        });
+                      }
+                    %>
+                    <% if (totalStock > 0) { %>
+                      <span class="text-xs text-green-600 font-medium">In Stock</span>
+                    <% } else { %>
+                      <span class="text-xs text-gray-400">Sold Out</span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </a>
+          <% }); %>
+        <% } else { %>
+          <div class="col-span-full text-center py-10">
+            <p class="text-gray-500">No new products available at the moment.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </section>
+    
+</body>
+</html>

@@ -67,11 +67,11 @@
                     <td class="py-3">
                       <div class="flex space-x-2">
                         <% if (data[i].isBlocked === false) { %>
-                          <a href="/admin/blockCustomer?id=<%= data[i]._id %>"
-                             class="text-red-500 hover:underline">Block</a>
+                          <button onclick="showConfirmModal('/admin/blockCustomer?id=<%= data[i]._id %>', 'block')"
+                             class="text-red-500 hover:underline">Block</button>
                         <% } else { %>
-                          <a href="/admin/unblockCustomer?id=<%= data[i]._id %>"
-                             class="text-green-500 hover:underline">Unblock</a>
+                          <button onclick="showConfirmModal('/admin/unblockCustomer?id=<%= data[i]._id %>', 'unblock')"
+                             class="text-green-500 hover:underline">Unblock</button>
                         <% } %>
       
                       </div>
@@ -97,7 +97,21 @@
       </div>
     </div>
 
-  
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+        <h3 class="text-lg font-semibold mb-4" id="modalTitle">Confirm Action</h3>
+        <p class="text-gray-600 mb-6" id="modalMessage"></p>
+        <div class="flex justify-end space-x-3">
+          <button onclick="hideConfirmModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">
+            Cancel
+          </button>
+          <button id="confirmButton" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
 
     <script>
    
@@ -126,6 +140,28 @@
             row.style.display = "none";
           }
         });
+      }
+
+      function showConfirmModal(url, action) {
+        const modal = document.getElementById('confirmModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const confirmButton = document.getElementById('confirmButton');
+
+        modalTitle.textContent = action === 'block' ? 'Block User' : 'Unblock User';
+        modalMessage.textContent = `Are you sure you want to ${action} this user?`;
+        confirmButton.className = `px-4 py-2 ${action === 'block' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded`;
+        
+        modal.style.display = 'flex';
+        
+        confirmButton.onclick = () => {
+          window.location.href = url;
+        };
+      }
+
+      function hideConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        modal.style.display = 'none';
       }
     </script>
   </body>

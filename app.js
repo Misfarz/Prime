@@ -40,6 +40,9 @@ app.use((req,res,next) => {
     next()
 });
   
+
+
+
 app.use('/',userRouter);
 app.use('/admin',adminRouter);
 app.use(passport.initialize());

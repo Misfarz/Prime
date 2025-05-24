@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Details – Prime.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+    <div class="flex flex-1">
+      <%- include("../partials/admin/_sidebar") %>
+
+      <div class="flex-1 flex flex-col">
+        <%- include("../partials/admin/_header") %>
+        
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-6">
+            <div>
+              <a href="/admin/orders" class="text-blue-500 hover:underline flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Orders
+              </a>
+              <h1 class="text-2xl font-semibold mt-2">Order Details: <%= order.orderNumber %></h1>
+            </div>
+            <div class="flex space-x-2">
+              <select 
+                id="orderStatus" 
+                class="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <%= ['Cancelled', 'Returned'].includes(order.orderStatus) ? 'disabled' : '' %>
+              >
+                <option value="Placed" <%= order.orderStatus === 'Placed' ? 'selected' : '' %>>Placed</option>
+                <option value="Processing" <%= order.orderStatus === 'Processing' ? 'selected' : '' %>>Processing</option>
+                <option value="Shipped" <%= order.orderStatus === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                <option value="Out for Delivery" <%= order.orderStatus === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
+                <option value="Delivered" <%= order.orderStatus === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                <option value="Cancelled" <%= order.orderStatus === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+              </select>
+              <button 
+                onclick="updateOrderStatus()" 
+                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                <%= ['Cancelled', 'Returned'].includes(order.orderStatus) ? 'disabled' : '' %>
+              >
+                Update Status
+              </button>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+           
+            <div class="bg-white p-6 rounded-lg shadow">
+              <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+              <div class="space-y-3">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Order Date:</span>
+                  <span><%= new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Order Status:</span>
+                  <% 
+                    let statusClass = '';
+                    switch(order.orderStatus) {
+                      case 'Placed':
+                        statusClass = 'bg-blue-100 text-blue-800';
+                        break;
+                      case 'Processing':
+                        statusClass = 'bg-yellow-100 text-yellow-800';
+                        break;
+                      case 'Shipped':
+                        statusClass = 'bg-indigo-100 text-indigo-800';
+                        break;
+                      case 'Out for Delivery':
+                        statusClass = 'bg-purple-100 text-purple-800';
+                        break;
+                      case 'Delivered':
+                        statusClass = 'bg-green-100 text-green-800';
+                        break;
+                      case 'Cancelled':
+                        statusClass = 'bg-red-100 text-red-800';
+                        break;
+                      case 'Returned':
+                        statusClass = 'bg-orange-100 text-orange-800';
+                        break;
+                      default:
+                        statusClass = 'bg-gray-100 text-gray-800';
+                    }
+                  %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= statusClass %>">
+                    <%= order.orderStatus %>
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Payment Method:</span>
+                  <span class="capitalize"><%= order.paymentMethod %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Payment Status:</span>
+                  <% 
+                    let paymentStatusClass = '';
+                    switch(order.paymentStatus) {
+                      case 'Paid':
+                        paymentStatusClass = 'bg-green-100 text-green-800';
+                        break;
+                      case 'Pending':
+                        paymentStatusClass = 'bg-yellow-100 text-yellow-800';
+                        break;
+                      case 'Failed':
+                        paymentStatusClass = 'bg-red-100 text-red-800';
+                        break;
+                      case 'Refunded':
+                        paymentStatusClass = 'bg-blue-100 text-blue-800';
+                        break;
+                      default:
+                        paymentStatusClass = 'bg-gray-100 text-gray-800';
+                    }
+                  %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= paymentStatusClass %>">
+                    <%= order.paymentStatus %>
+                  </span>
+                </div>
+                <% if (order.cancelledAt) { %>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Cancelled On:</span>
+                    <span><%= new Date(order.cancelledAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                  </div>
+                  <% if (order.cancelReason) { %>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Cancel Reason:</span>
+                      <span><%= order.cancelReason %></span>
+                    </div>
+                  <% } %>
+                <% } %>
+                <% if (order.deliveredAt) { %>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Delivered On:</span>
+                    <span><%= new Date(order.deliveredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                  </div>
+                <% } %>
+                <% if (order.returnedAt) { %>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Returned On:</span>
+                    <span><%= new Date(order.returnedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                  </div>
+                  <% if (order.returnReason) { %>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Return Reason:</span>
+                      <span><%= order.returnReason %></span>
+                    </div>
+                  <% } %>
+                <% } %>
+                <hr class="my-3">
+                <div class="flex justify-between font-semibold">
+                  <span>Subtotal:</span>
+                  <span>₹<%= order.subtotal.toFixed(2) %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Shipping:</span>
+                  <span>₹<%= order.shipping.toFixed(2) %></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Tax:</span>
+                  <span>₹<%= order.tax.toFixed(2) %></span>
+                </div>
+                <% if (order.discount > 0) { %>
+                  <div class="flex justify-between text-green-600">
+                    <span>Discount:</span>
+                    <span>-₹<%= order.discount.toFixed(2) %></span>
+                  </div>
+                <% } %>
+                <div class="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
+                  <span>Total:</span>
+                  <span>₹<%= order.total.toFixed(2) %></span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Customer Information -->
+            <div class="bg-white p-6 rounded-lg shadow">
+              <h2 class="text-lg font-semibold mb-4">Customer Information</h2>
+              <div class="space-y-3">
+                <div>
+                  <span class="text-gray-600 block">Name:</span>
+                  <span class="font-medium"><%= order.user.firstName %> <%= order.user.lastName %></span>
+                </div>
+                <div>
+                  <span class="text-gray-600 block">Email:</span>
+                  <span class="font-medium"><%= order.user.email %></span>
+                </div>
+                <div>
+                  <span class="text-gray-600 block">Phone:</span>
+                  <span class="font-medium"><%= order.user.phone %></span>
+                </div>
+              </div>
+              
+              <h3 class="text-md font-semibold mt-6 mb-3">Shipping Address</h3>
+              <div class="space-y-1">
+                <p><%= order.shippingAddress.fullName %></p>
+                <p><%= order.shippingAddress.addressLine1 %></p>
+                <% if (order.shippingAddress.addressLine2) { %>
+                  <p><%= order.shippingAddress.addressLine2 %></p>
+                <% } %>
+                <p><%= order.shippingAddress.city %>, <%= order.shippingAddress.state %> <%= order.shippingAddress.postalCode %></p>
+                <p><%= order.shippingAddress.country %></p>
+                <p>Phone: <%= order.shippingAddress.phone %></p>
+              </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="bg-white p-6 rounded-lg shadow">
+              <h2 class="text-lg font-semibold mb-4">Order Actions</h2>
+              <div class="space-y-3">
+                <% if (order.orderStatus === 'Returned' && order.paymentStatus !== 'Refunded') { %>
+                  <button 
+                    onclick="verifyReturn('<%= order._id %>', 'approve')" 
+                    class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-check-circle mr-2"></i> Approve Return
+                  </button>
+                  <button 
+                    onclick="verifyReturn('<%= order._id %>', 'reject')" 
+                    class="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-times-circle mr-2"></i> Reject Return
+                  </button>
+                <% } %>
+                <% if (order.invoiceUrl) { %>
+                  <a 
+                    href="<%= order.invoiceUrl %>" 
+                    target="_blank" 
+                    class="w-full bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 flex items-center justify-center"
+                  >
+                    <i class="fas fa-file-invoice mr-2"></i> View Invoice
+                  </a>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Order Items -->
+          <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b">
+              <h2 class="text-lg font-semibold">Order Items</h2>
+            </div>
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Quantity
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <% order.items.forEach(item => { %>
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <% if (item.product && item.product.productImage && item.product.productImage.length > 0) { %>
+                          <div class="flex-shrink-0 h-10 w-10">
+                            <img class="h-10 w-10 rounded-md object-cover" src="<%= item.product.productImage[0] %>" alt="<%= item.product.productName %>">
+                          </div>
+                        <% } %>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">
+                            <%= item.product ? item.product.productName : 'Product not available' %>
+                          </div>
+                          <% if (item.size || item.color) { %>
+                            <div class="text-xs text-gray-500">
+                              <% if (item.size) { %>Size: <%= item.size %><% } %>
+                              <% if (item.size && item.color) { %> | <% } %>
+                              <% if (item.color) { %>Color: <%= item.color %><% } %>
+                            </div>
+                          <% } %>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ₹<%= item.price.toFixed(2) %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <%= item.quantity %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ₹<%= item.total.toFixed(2) %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <% 
+                        let itemStatusClass = '';
+                        switch(item.status) {
+                          case 'Placed':
+                            itemStatusClass = 'bg-blue-100 text-blue-800';
+                            break;
+                          case 'Processing':
+                            itemStatusClass = 'bg-yellow-100 text-yellow-800';
+                            break;
+                          case 'Shipped':
+                            itemStatusClass = 'bg-indigo-100 text-indigo-800';
+                            break;
+                          case 'Delivered':
+                            itemStatusClass = 'bg-green-100 text-green-800';
+                            break;
+                          case 'Cancelled':
+                            itemStatusClass = 'bg-red-100 text-red-800';
+                            break;
+                          case 'Returned':
+                            itemStatusClass = 'bg-orange-100 text-orange-800';
+                            break;
+                          default:
+                            itemStatusClass = 'bg-gray-100 text-gray-800';
+                        }
+                      %>
+                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= itemStatusClass %>">
+                        <%= item.status %>
+                      </span>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function updateOrderStatus() {
+        const status = document.getElementById('orderStatus').value;
+        const orderId = '<%= order._id %>';
+        
+        fetch('/admin/orders/update-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            orderId,
+            status
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message || 'Failed to update order status');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your request');
+        });
+      }
+      
+      function verifyReturn(orderId, action) {
+        if (!confirm(`Are you sure you want to ${action} this return request?`)) {
+          return;
+        }
+        
+        fetch('/admin/orders/verify-return', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            orderId,
+            action
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message || `Failed to ${action} return`);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your request');
+        });
+      }
+    </script>
+  </body>
+</html>

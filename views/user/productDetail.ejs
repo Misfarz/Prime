@@ -5,20 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= product.productName %> - Prime Jersey Store</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body {
       font-family: 'Inter', sans-serif;
       scroll-behavior: smooth;
+      background-color: #fafafa;
     }
     .product-image-thumbnail {
       transition: all 0.2s ease;
       cursor: pointer;
-      border: 2px solid transparent;
+      border: 1px solid transparent;
     }
     .product-image-thumbnail.active {
-      border-color: #3b82f6;
+      border-color: #000;
     }
     .product-image-thumbnail:hover {
       transform: translateY(-2px);
@@ -30,13 +31,14 @@
       cursor: pointer;
       padding: 0.5rem 1rem;
       border: 1px solid #e5e7eb;
-      border-radius: 0.375rem;
+      border-radius: 0;
       transition: all 0.2s ease;
+      font-weight: 500;
     }
     .size-selector input[type="radio"]:checked + label {
-      background-color: #3b82f6;
+      background-color: #000;
       color: white;
-      border-color: #3b82f6;
+      border-color: #000;
     }
     .size-selector input[type="radio"]:disabled + label {
       background-color: #f3f4f6;
@@ -45,30 +47,117 @@
       text-decoration: line-through;
     }
     .product-card {
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      background-color: white;
+      border-radius: 0;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      border: 1px solid #f0f0f0;
     }
     .product-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
     .sale-badge {
       position: absolute;
       top: 12px;
       right: 12px;
-      background-color: #ef4444;
+      background-color: #000;
       color: white;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
+    .product-image-container {
+      position: relative;
+      padding-top: 120%;
+      background-color: #f8f8f8;
+    }
+    .product-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.3s ease;
+    }
+    
+    .zoom-container {
+      position: relative;
+      overflow: hidden;
+      cursor: zoom-in;
+    }
+    
+    .zoom-image {
+      transition: transform 0.3s ease;
+    }
+    
+   
+    .zoom-container:hover .zoom-image {
+      transform: scale(1.5);
+    }
+    
+    
+    .zoom-container.active .zoom-image {
+      transition: transform 0.1s ease-out;
+    }
+    
+    /* Toast notification styles */
+    .toast-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      background-color: #4CAF50;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 4px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      transform: translateX(120%);
+      transition: transform 0.3s ease-in-out;
+      max-width: 350px;
+    }
+    
+    .toast-notification.show {
+      transform: translateX(0);
+    }
+    
+    .toast-notification i {
+      margin-right: 12px;
+      font-size: 20px;
+    }
+    
+    .toast-notification .toast-message {
+      flex-grow: 1;
+      font-weight: 500;
+    }
+    
+    .toast-notification .toast-close {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      margin-left: 8px;
+      opacity: 0.7;
+    }
+    
+    .toast-notification .toast-close:hover {
+      opacity: 1;
     }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="text-gray-900">
   <%- include("../../views/partials/user/header") %>
 
-  <!-- Breadcrumbs -->
+
   <div class="bg-white border-b">
     <div class="max-w-7xl mx-auto px-6 py-3">
       <div class="flex items-center text-sm text-gray-500">
@@ -83,38 +172,36 @@
     </div>
   </div>
 
-  <!-- Product Detail Section -->
-  <section class="py-12">
+
+  <section class="py-12 bg-white">
     <div class="max-w-7xl mx-auto px-6">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <!-- Product Images -->
+      
         <div>
-          <div class="bg-white rounded-xl overflow-hidden shadow-sm mb-4">
-            <img id="mainProductImage" src="<%= product.productImage[0] %>" alt="<%= product.productName %>" class="w-full h-auto object-cover">
+          <div class="bg-[#f8f8f8] mb-4 zoom-container" id="zoomContainer">
+            <img id="mainProductImage" src="<%= product.productImage[0] %>" alt="<%= product.productName %>" class="zoom-image">
           </div>
-          <div class="grid grid-cols-4 gap-4">
+          <div class="grid grid-cols-5 gap-3">
             <% product.productImage.forEach((image, index) => { %>
-              <div class="product-image-thumbnail rounded-lg overflow-hidden <%= index === 0 ? 'active' : '' %>" onclick="changeMainImage('<%= image %>', this)">
-                <img src="<%= image %>" alt="<%= product.productName %> thumbnail" class="w-full h-24 object-cover">
+              <div class="product-image-thumbnail bg-[#f8f8f8] overflow-hidden <%= index === 0 ? 'active' : '' %>" onclick="changeMainImage('<%= image %>', this)">
+                <img src="<%= image %>" alt="<%= product.productName %> thumbnail" class="w-full h-20 object-cover">
               </div>
             <% }); %>
           </div>
         </div>
 
-     
+        <!-- Product Info -->
         <div>
-          <% if (product.isNew) { %>
-            <div class="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold mb-3">
-              <i class="fas fa-bolt mr-1"></i> New Arrival
-            </div>
-          <% } %>
-          <% if (product.isFeatured) { %>
-            <div class="inline-block bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold mb-3 ml-2">
-              <i class="fas fa-star mr-1"></i> Featured
-            </div>
-          <% } %>
+          <div class="mb-2">
+            <% if (product.isNew) { %>
+              <span class="inline-block bg-black text-white px-2 py-1 text-xs font-medium mr-2">NEW</span>
+            <% } %>
+            <% if (product.isFeatured) { %>
+              <span class="inline-block bg-black text-white px-2 py-1 text-xs font-medium">FEATURED</span>
+            <% } %>
+          </div>
           
-          <h1 class="text-3xl font-bold mb-2"><%= product.productName %></h1>
+          <h1 class="text-2xl font-medium mb-3 text-gray-900"><%= product.productName %></h1>
           
           <div class="flex items-center mb-4">
             <div class="text-yellow-400 flex items-center">
@@ -130,20 +217,19 @@
           <div class="mb-6">
             <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
               <div class="flex items-center">
-                <span class="text-3xl font-bold text-gray-900">$<%= product.salePrice %></span>
-                <span class="text-lg text-gray-500 line-through ml-3">$<%= product.regularPrice %></span>
-                <span class="ml-3 bg-red-100 text-red-800 px-2 py-1 rounded-md text-sm font-medium">
+                <span class="text-xl font-medium text-gray-900">₹<%= product.salePrice %></span>
+                <span class="text-sm text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
+                <span class="ml-2 bg-black text-white px-2 py-0.5 text-xs font-medium">
                   <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>% OFF
                 </span>
               </div>
             <% } else { %>
-              <span class="text-3xl font-bold text-gray-900">$<%= product.regularPrice %></span>
+              <span class="text-xl font-medium text-gray-900">₹<%= product.regularPrice %></span>
             <% } %>
           </div>
           
-          
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold mb-3">Select Size</h3>
+          <div class="mb-6 border-t border-b border-gray-200 py-6">
+            <h3 class="text-sm font-medium mb-4">SELECT SIZE</h3>
             <form id="addToCartForm" class="size-selector grid grid-cols-3 sm:grid-cols-6 gap-2">
               <% ['XS', 'S', 'M', 'L', 'XL', 'XXL'].forEach(sizeOption => { %>
                 <% 
@@ -171,50 +257,51 @@
             </form>
           </div>
           
-          <div class="mb-8">
-            <h3 class="text-lg font-semibold mb-3">Quantity</h3>
-            <div class="flex items-center">
-              <button id="decreaseQuantity" class="bg-gray-200 px-3 py-2 rounded-l-lg hover:bg-gray-300 transition">
-                <i class="fas fa-minus"></i>
+          <div class="mb-6">
+            <h3 class="text-sm font-medium mb-4">QUANTITY</h3>
+            <div class="flex items-center border border-gray-300 inline-flex">
+              <button id="decreaseQuantity" class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition">
+                <i class="fas fa-minus text-gray-600 text-xs"></i>
               </button>
-              <input type="number" id="quantity" min="1" max="10" value="1" class="w-16 text-center py-2 border-y border-gray-200 focus:outline-none">
-              <button id="increaseQuantity" class="bg-gray-200 px-3 py-2 rounded-r-lg hover:bg-gray-300 transition">
-                <i class="fas fa-plus"></i>
+              <input type="number" id="quantity" min="1" max="10" value="1" class="w-12 text-center py-2 border-x border-gray-300 focus:outline-none">
+              <button id="increaseQuantity" class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 transition">
+                <i class="fas fa-plus text-gray-600 text-xs"></i>
               </button>
             </div>
           </div>
           
-          <div class="flex flex-col sm:flex-row gap-4">
-            <button id="addToCartBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center">
+          <div class="flex flex-col sm:flex-row gap-4 mb-8">
+            <button id="addToCartBtn" class="flex-1 bg-black hover:bg-gray-900 text-white px-6 py-3 font-medium flex items-center justify-center transition-colors">
               <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
             </button>
-            <button id="buyNowBtn" class="flex-1 bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center">
+            <button id="buyNowBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-3 font-medium flex items-center justify-center transition-colors">
               <i class="fas fa-bolt mr-2"></i> Buy Now
+            </button>
+            <button id="wishlistBtn" class="flex-none bg-white border border-gray-300 hover:bg-gray-100 text-gray-900 px-4 py-3 font-medium flex items-center justify-center transition-colors" data-product-id="<%= product._id %>">
+              <i class="<%= user && user.whishlist && user.whishlist.includes(product._id.toString()) ? 'fas' : 'far' %> fa-heart mr-2 wishlist-icon"></i>
             </button>
           </div>
           
-          <div class="mt-8 border-t border-gray-200 pt-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="flex items-center">
-                <i class="fas fa-truck text-blue-600 text-xl mr-3"></i>
-                <div>
-                  <h4 class="font-medium">Free Shipping</h4>
-                  <p class="text-sm text-gray-500">On orders over $50</p>
-                </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-gray-200 pt-6">
+            <div class="flex items-center">
+              <i class="fas fa-truck text-gray-600 text-lg mr-3"></i>
+              <div>
+                <h4 class="font-medium text-sm">Free Shipping</h4>
+                <p class="text-xs text-gray-500">On orders over ₹3,500</p>
               </div>
-              <div class="flex items-center">
-                <i class="fas fa-exchange-alt text-blue-600 text-xl mr-3"></i>
-                <div>
-                  <h4 class="font-medium">Easy Returns</h4>
-                  <p class="text-sm text-gray-500">30-day return policy</p>
-                </div>
+            </div>
+            <div class="flex items-center">
+              <i class="fas fa-exchange-alt text-gray-600 text-lg mr-3"></i>
+              <div>
+                <h4 class="font-medium text-sm">Easy Returns</h4>
+                <p class="text-xs text-gray-500">30 day return policy</p>
               </div>
-              <div class="flex items-center">
-                <i class="fas fa-shield-alt text-blue-600 text-xl mr-3"></i>
-                <div>
-                  <h4 class="font-medium">Secure Checkout</h4>
-                  <p class="text-sm text-gray-500">100% protected payments</p>
-                </div>
+            </div>
+            <div class="flex items-center">
+              <i class="fas fa-shield-alt text-gray-600 text-lg mr-3"></i>
+              <div>
+                <h4 class="font-medium text-sm">Secure Payments</h4>
+                <p class="text-xs text-gray-500">Encrypted transactions</p>
               </div>
             </div>
           </div>
@@ -224,17 +311,17 @@
   </section>
 
  
-  <section class="py-12 bg-white">
+  <section class="py-12 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="border-b border-gray-200 mb-8">
         <div class="flex flex-wrap -mb-px">
-          <button class="tab-btn active inline-block p-4 border-b-2 border-blue-600 font-medium text-blue-600" data-tab="details">
+          <button class="tab-btn active inline-block p-4 border-b-2 border-black font-medium text-gray-900" data-tab="details">
             Product Details
           </button>
-          <button class="tab-btn inline-block p-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="reviews">
+          <button class="tab-btn inline-block p-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-900 transition" data-tab="reviews">
             Reviews
           </button>
-          <button class="tab-btn inline-block p-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700" data-tab="shipping">
+          <button class="tab-btn inline-block p-4 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-900 transition" data-tab="shipping">
             Shipping & Returns
           </button>
         </div>
@@ -243,7 +330,7 @@
       <div id="details" class="tab-content active">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <h3 class="text-xl font-semibold mb-4">Product Specifications</h3>
+            <h3 class="text-lg font-medium mb-4">Product Specifications</h3>
             <table class="w-full text-left">
               <tbody>
                 <tr class="border-b border-gray-200">
@@ -278,8 +365,9 @@
             </table>
           </div>
           <div>
-            <h3 class="text-xl font-semibold mb-4">Product Description</h3>
+            <h3 class="text-lg font-medium mb-4">Product Description</h3>
             <p class="text-gray-700 leading-relaxed mb-4"><%= product.description %></p>
+          </div>
         </div>
       </div>
  
@@ -287,66 +375,67 @@
      
 
  
-  <section class="py-12 bg-gray-50">
+  <section class="py-16 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
-      <h2 class="text-2xl font-bold mb-8">You May Also Like</h2>
+      <div class="text-center mb-12">
+        <h2 class="text-3xl font-light mb-3 tracking-tight">You May Also Like</h2>
+        <p class="text-gray-500 max-w-2xl mx-auto">More jerseys from our collection</p>
+      </div>
       
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
         <% relatedProducts.forEach(relatedProduct => { %>
-          <a href="/product/<%= relatedProduct._id %>" class="group">
-            <div class="product-card bg-white rounded-xl overflow-hidden shadow-md h-full flex flex-col border border-gray-100">
-              <% if (relatedProduct.isNew) { %>
-                <div class="absolute top-4 left-4 z-10">
-                  <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
-                    <i class="fas fa-bolt mr-1"></i> New
-                  </span>
-                </div>
-              <% } %>
+          <a href="/product/<%= relatedProduct._id %>" class="group" aria-label="<%= relatedProduct.productName %>">
+            <div class="product-card">
               <% if (relatedProduct.salePrice && relatedProduct.salePrice < relatedProduct.regularPrice) { %>
                 <div class="sale-badge">SAVE <%= Math.round((1 - relatedProduct.salePrice/relatedProduct.regularPrice)*100) %>%</div>
               <% } %>
-              <div class="overflow-hidden relative pt-[100%]">
+              <div class="product-image-container">
+                <button class="wishlist-btn absolute top-3 left-3 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm hover:shadow-md transition-all" 
+                  data-product-id="<%= relatedProduct._id %>" 
+                  onclick="event.preventDefault(); toggleWishlist(this, '<%= relatedProduct._id %>')">
+                  <i class="<%= user && user.whishlist && user.whishlist.includes(relatedProduct._id.toString()) ? 'fas text-red-500' : 'far' %> fa-heart text-sm"></i>
+                </button>
                 <img src="<%= relatedProduct.productImage[0] %>" alt="<%= relatedProduct.productName %>"
-                     class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                     class="product-image group-hover:opacity-90">
               </div>
-              <div class="p-6 flex-grow flex flex-col">
-                <div class="flex-grow">
-                  <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition mb-2"><%= relatedProduct.productName %></h3>
-                  <p class="text-gray-600 mb-4 line-clamp-2"><%= relatedProduct.description %></p>
-                </div>
-                <div>
-                  <div class="flex justify-between items-center">
-                    <div>
-                      <span class="text-lg font-bold text-gray-900">
-                        $<%= relatedProduct.salePrice || relatedProduct.regularPrice %>
-                      </span>
-                      <% if (relatedProduct.salePrice && relatedProduct.salePrice < relatedProduct.regularPrice) { %>
-                        <span class="text-sm text-gray-500 line-through ml-2">$<%= relatedProduct.regularPrice %></span>
-                      <% } %>
-                    </div>
-                    <% 
-                      let relatedTotalStock = 0;
-                      if (relatedProduct.sizes && relatedProduct.sizes.length > 0) {
-                        relatedProduct.sizes.forEach(size => {
-                          relatedTotalStock += size.quantity || 0;
-                        });
-                      }
-                    %>
-                    <% if (relatedTotalStock > 0) { %>
-                      <span class="text-xs bg-green-100 text-green-800 px-3 py-1.5 rounded-full flex items-center">
-                        <i class="fas fa-check-circle mr-1"></i> In Stock
-                      </span>
-                    <% } else { %>
-                      <span class="text-xs bg-red-100 text-red-800 px-3 py-1.5 rounded-full flex items-center">
-                        <i class="fas fa-times-circle mr-1"></i> Sold Out
-                      </span>
+              <div class="p-4 flex flex-col flex-grow">
+                <h3 class="text-md font-medium text-gray-900 mb-1"><%= relatedProduct.productName %></h3>
+                <div class="flex justify-between items-center mt-3">
+                  <div>
+                    <span class="text-sm font-medium text-gray-900">
+                      ₹<%= relatedProduct.salePrice || relatedProduct.regularPrice %>
+                    </span>
+                    <% if (relatedProduct.salePrice && relatedProduct.salePrice < relatedProduct.regularPrice) { %>
+                      <span class="text-xs text-gray-400 line-through ml-2">₹<%= relatedProduct.regularPrice %></span>
                     <% } %>
                   </div>
+                  <% 
+                    let relatedTotalStock = 0;
+                    if (relatedProduct.sizes && relatedProduct.sizes.length > 0) {
+                      relatedProduct.sizes.forEach(size => {
+                        relatedTotalStock += size.quantity || 0;
+                      });
+                    }
+                  %>
+                  <% if (relatedTotalStock > 0) { %>
+                    <span class="text-xs text-green-600 font-medium">In Stock</span>
+                  <% } else { %>
+                    <span class="text-xs text-gray-400">Sold Out</span>
+                  <% } %>
                 </div>
               </div>
             </div>
           </a>
         <% }); %>
+      </div>
+      
+      <div class="text-center mt-8">
+        <a href="/shopall" class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors">
+          View all products
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
       </div>
     </div>
   </section>
@@ -354,18 +443,57 @@
   <%- include("../../views/partials/user/footer") %>
 
   <script>
-   
-    function changeMainImage(imageSrc, thumbnail) {
-      document.getElementById('mainProductImage').src = imageSrc;
+ 
+    function toggleWishlist(button, productId) {
+      const wishlistIcon = button.querySelector('i');
+      const isInWishlist = wishlistIcon.classList.contains('fas');
       
-    
-      document.querySelectorAll('.product-image-thumbnail').forEach(thumb => {
-        thumb.classList.remove('active');
-      });
-      thumbnail.classList.add('active');
+      if (isInWishlist) {
+        
+        fetch(`/wishlist/remove/${productId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            wishlistIcon.classList.remove('fas', 'text-red-500');
+            wishlistIcon.classList.add('far');
+          } else {
+            alert(data.message || 'Failed to remove from wishlist');
+          }
+        })
+        .catch(error => {
+          console.error('Error removing from wishlist:', error);
+          alert('An error occurred. Please try again.');
+        });
+      } else {
+       
+        fetch(`/wishlist/add/${productId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            wishlistIcon.classList.remove('far');
+            wishlistIcon.classList.add('fas', 'text-red-500');
+          } else {
+            alert(data.message || 'Failed to add to wishlist');
+          }
+        })
+        .catch(error => {
+          console.error('Error adding to wishlist:', error);
+          alert('An error occurred. Please try again.');
+        });
+      }
     }
     
-
+   
     document.getElementById('decreaseQuantity').addEventListener('click', function() {
       const quantityInput = document.getElementById('quantity');
       const currentValue = parseInt(quantityInput.value);
@@ -383,29 +511,89 @@
       }
     });
     
-
+    
     document.querySelectorAll('.tab-btn').forEach(button => {
       button.addEventListener('click', function() {
         const tabId = this.getAttribute('data-tab');
         
-        
+     
         document.querySelectorAll('.tab-btn').forEach(btn => {
-          btn.classList.remove('active', 'border-blue-600', 'text-blue-600');
+          btn.classList.remove('active', 'border-black', 'text-gray-900');
           btn.classList.add('border-transparent', 'text-gray-500');
         });
-        this.classList.add('active', 'border-blue-600', 'text-blue-600');
+        this.classList.add('active', 'border-black', 'text-gray-900');
         this.classList.remove('border-transparent', 'text-gray-500');
         
-      
+       
         document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
           content.classList.add('hidden');
         });
         document.getElementById(tabId).classList.remove('hidden');
+        document.getElementById(tabId).classList.add('active');
       });
     });
     
-   
+   //add to cart functionality
     document.getElementById('addToCartBtn').addEventListener('click', function() {
+      const selectedSize = document.querySelector('input[name="size"]:checked');
+      const quantity = document.getElementById('quantity').value;
+      const productId = '<%= product._id %>';
+      
+      if (!selectedSize) {
+        alert('Please select a size');
+        return;
+      }
+      
+     
+      this.disabled = true;
+      this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Adding...';
+    
+      fetch('/cart/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          productId: productId,
+          size: selectedSize.value,
+          quantity: parseInt(quantity)
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+       
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i> Add to Cart';
+        
+        if (data.success) {
+      
+          const cartCountElement = document.querySelector('.cart-count');
+          if (cartCountElement) {
+            cartCountElement.textContent = data.cartCount;
+            cartCountElement.classList.remove('hidden');
+          } else {
+            
+            window.location.reload();
+            return;
+          }
+          
+          alert('Product added to cart successfully!');
+        } else {
+          alert(data.message || 'Failed to add product to cart');
+        }
+      })
+      .catch(error => {
+        console.error('Error adding to cart:', error);
+        alert('An error occurred. Please try again.');
+       
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i> Add to Cart';
+      });
+    });
+    
+  
+    document.getElementById('buyNowBtn').addEventListener('click', function() {
       const selectedSize = document.querySelector('input[name="size"]:checked');
       const quantity = document.getElementById('quantity').value;
       
@@ -414,8 +602,60 @@
         return;
       }
       
-      alert(`Added ${quantity} item(s) of size ${selectedSize.value} to cart!`);
+      alert(`Proceeding to checkout with ${quantity} item(s) of size ${selectedSize.value}`);
+    });
     
+    // Wishlist functionality
+    document.getElementById('wishlistBtn').addEventListener('click', function() {
+      const productId = this.getAttribute('data-product-id');
+      const wishlistIcon = this.querySelector('.wishlist-icon');
+      const isInWishlist = wishlistIcon.classList.contains('fas');
+      
+      if (isInWishlist) {
+    
+        fetch(`/wishlist/remove/${productId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            wishlistIcon.classList.remove('fas');
+            wishlistIcon.classList.add('far');
+            wishlistIcon.style.color = '';
+          } else {
+            alert(data.message || 'Failed to remove from wishlist');
+          }
+        })
+        .catch(error => {
+          console.error('Error removing from wishlist:', error);
+          alert('An error occurred. Please try again.');
+        });
+      } else {
+        // Add to wishlist
+        fetch(`/wishlist/add/${productId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            wishlistIcon.classList.remove('far');
+            wishlistIcon.classList.add('fas');
+            wishlistIcon.style.color = '#ef4444';
+          } else {
+            alert(data.message || 'Failed to add to wishlist');
+          }
+        })
+        .catch(error => {
+          console.error('Error adding to wishlist:', error);
+          alert('An error occurred. Please try again.');
+        });
+      }
     });
     
     document.getElementById('buyNowBtn').addEventListener('click', function() {
@@ -430,6 +670,73 @@
       alert(`Proceeding to checkout with ${quantity} item(s) of size ${selectedSize.value}!`);
      
     });
-  </script>
+   
+    function changeMainImage(imageSrc, thumbnail) {
+      const mainImage = document.getElementById('mainProductImage');
+      mainImage.src = imageSrc;
+      
+   
+      document.querySelectorAll('.product-image-thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+      });
+      thumbnail.classList.add('active');
+    }
+    
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded, initializing zoom functionality');
+      const container = document.getElementById('zoomContainer');
+      const mainImage = document.getElementById('mainProductImage');
+      
+      if (!container || !mainImage) {
+        console.error('Missing zoom elements:', { container, mainImage });
+        return;
+      }
+      
+      console.log('Zoom elements found, setting up event listeners');
+      
+    
+      let isZooming = false;
+      const zoomLevel = 1.5; 
+      
+      
+      container.addEventListener('mouseenter', function() {
+        console.log('Mouse entered container');
+        container.classList.add('active');
+        isZooming = true;
+      });
+   
+      container.addEventListener('mouseleave', function() {
+        console.log('Mouse left container');
+        container.classList.remove('active');
+        isZooming = false;
+       
+        mainImage.style.transformOrigin = 'center center';
+      });
+      
+
+      container.addEventListener('mousemove', function(e) {
+        if (!isZooming) return;
+        
+      
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+  
+        const posX = (mouseX / rect.width) * 100;
+        const posY = (mouseY / rect.height) * 100;
+ 
+        mainImage.style.transformOrigin = `${posX}% ${posY}%`;
+      });
+      
+      
+      mainImage.addEventListener('load', function() {
+        console.log('Main image loaded');
+      });
+      
+      console.log('Zoom functionality initialized');
+    });
+</script>
 </body>
 </html>

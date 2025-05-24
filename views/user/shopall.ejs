@@ -51,6 +51,30 @@
       padding-top: 120%;
       background-color: #f8f8f8;
     }
+    
+    .wishlist-btn {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
+      background-color: white;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: all 0.2s ease;
+    }
+    
+    .wishlist-btn:hover {
+      transform: scale(1.1);
+    }
+    
+    .wishlist-btn.active i {
+      color: #ef4444;
+    }
 
     .product-image {
       position: absolute;
@@ -62,7 +86,7 @@
       transition: opacity 0.3s ease;
     }
     
-    /* Filter toggle button */
+ 
     .filter-toggle {
       transition: all 0.2s ease;
     }
@@ -71,7 +95,7 @@
       transform: scale(1.05);
     }
     
-    /* Filter panel animation */
+    
     .filter-panel {
       max-height: 0;
       overflow: hidden;
@@ -141,7 +165,7 @@
             <% } %>
           </form>
           
-          <!-- Active Filters Display -->
+     
           <div class="flex-grow flex flex-wrap items-center gap-2 justify-start md:justify-center">
             <% if (categoryId || subcategory || minPrice || maxPrice || (sort && sort !== 'alphabetical-asc')) { %>
               <span class="text-sm text-gray-500">Active filters:</span>
@@ -160,15 +184,15 @@
               
               <% if (minPrice && maxPrice) { %>
                 <span class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
-                  $<%= minPrice %> - $<%= maxPrice %>
+                  ₹<%= minPrice %> - ₹<%= maxPrice %>
                 </span>
               <% } else if (minPrice) { %>
                 <span class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
-                  From $<%= minPrice %>
+                  From ₹<%= minPrice %>
                 </span>
               <% } else if (maxPrice) { %>
                 <span class="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
-                  Up to $<%= maxPrice %>
+                  Up to ₹<%= maxPrice %>
                 </span>
               <% } %>
               
@@ -193,16 +217,16 @@
           </button>
         </div>
         
-        <!-- Filter Panel (Hidden by default) -->
+        
         <div id="filterPanel" class="filter-panel w-full mt-6 border-t pt-5">
           <form id="filterForm" action="/shopall" method="GET">
-            <!-- Hidden inputs to preserve search parameter -->
+          
             <% if (search) { %>
               <input type="hidden" name="search" value="<%= search %>">
             <% } %>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <!-- Category Filter -->
+              
               <div class="space-y-2">
                 <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
                 <div class="relative">
@@ -223,7 +247,7 @@
                 </div>
               </div>
               
-              <!-- Subcategory Filter -->
+            
               <div class="space-y-2" id="subcategoryContainer">
                 <label for="subcategory" class="block text-sm font-medium text-gray-700">Subcategory</label>
                 <div class="relative">
@@ -244,7 +268,7 @@
                 </div>
               </div>
               
-              <!-- Sort Control -->
+              
               <div class="space-y-2">
                 <label for="sort" class="block text-sm font-medium text-gray-700">Sort by</label>
                 <div class="relative">
@@ -265,7 +289,7 @@
               </div>
             </div>
             
-            <!-- Price Range Filter -->
+            
             <div class="mb-6">
               <label class="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
               <div class="flex flex-wrap items-center gap-4">
@@ -299,7 +323,7 @@
               </div>
             </div>
             
-            <!-- Filter Action Buttons -->
+           
             <div class="flex justify-end gap-3">
               <button 
                 type="button" 
@@ -341,8 +365,13 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
         <% if (products && products.length > 0) { %>
           <% products.forEach(product => { %>
-            <a href="/product/<%= product._id %>" class="group" aria-label="<%= product.productName %>">
-              <div class="product-card">
+            <div class="product-card relative">
+              <button class="wishlist-btn" 
+                data-product-id="<%= product._id %>" 
+                onclick="event.preventDefault(); toggleWishlist(this, '<%= product._id %>')">
+                <i class="<%= user && user.whishlist && user.whishlist.includes(product._id.toString()) ? 'fas text-red-500' : 'far' %> fa-heart text-sm"></i>
+              </button>
+              <a href="/product/<%= product._id %>" class="group block" aria-label="<%= product.productName %>">
                 <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
                   <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
                 <% } %>
@@ -356,10 +385,10 @@
                   <div class="flex justify-between items-center mt-auto">
                     <div>
                       <span class="text-sm font-medium text-gray-900">
-                        $<%= product.salePrice || product.regularPrice %>
+                        ₹<%= product.salePrice || product.regularPrice %>
                       </span>
                       <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
+                        <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
                     <% 
@@ -377,8 +406,8 @@
                     <% } %>
                   </div>
                 </div>
-              </div>
-            </a>
+              </a>
+            </div>
           <% }); %>
         <% } else { %>
           <div class="col-span-full text-center py-10">
@@ -483,10 +512,9 @@
       categoryInput.value = categoryValue;
       form.appendChild(categoryInput);
       
-      // Preserve other parameters
+ 
       const currentUrl = new URL(window.location.href);
-      
-      // Preserve search parameter
+   
       if (currentUrl.searchParams.has('search')) {
         const searchInput = document.createElement('input');
         searchInput.type = 'hidden';
@@ -540,7 +568,7 @@
       const subcategoryContainer = document.getElementById('subcategoryContainer');
       
       if (categorySelect.value === '') {
-        // Disable subcategory if no category is selected
+       
         subcategorySelect.disabled = true;
         subcategoryContainer.classList.add('opacity-50');
         subcategorySelect.innerHTML = '<option value="">All Subcategories</option>';
@@ -551,12 +579,11 @@
       }
     }
     
-    // Function to clear all filters
+   
     function clearAllFilters() {
       window.location.href = '/shopall';
     }
     
-    // Legacy function for backward compatibility
     function updateSort(value) {
       const sortSelect = document.getElementById('sort');
       sortSelect.value = value;
@@ -573,5 +600,11 @@
       });
     });
   </script>
+  <script src="/js/wishlist.js"></script>
+  <script>
+    // Pass user wishlist data to the frontend
+    window.userWishlist = JSON.parse('<%= JSON.stringify(user && user.whishlist ? user.whishlist.map(item => item.toString()) : []) %>');
+  </script>
+  <script src="/js/add-wishlist-buttons.js"></script>
 </body>
 </html>

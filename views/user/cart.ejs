@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shopping Cart - Prime Jersey Store</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      scroll-behavior: smooth;
+      background-color: #fafafa;
+    }
+    .product-card {
+      background-color: white;
+      border-radius: 0;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      border: 1px solid #f0f0f0;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .sale-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background-color: #000;
+      color: white;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
+    .product-image-container {
+      position: relative;
+      padding-top: 120%;
+      background-color: #f8f8f8;
+    }
+    .product-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.3s ease;
+    }
+    .empty-cart {
+      min-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .quantity-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9fafb;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quantity-btn:hover {
+      background-color: #f3f4f6;
+    }
+    .quantity-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .quantity-input {
+      width: 40px;
+      height: 32px;
+      text-align: center;
+      border: none;
+      border-left: 1px solid #e5e7eb;
+      border-right: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    .quantity-input:focus {
+      outline: none;
+    }
+    .out-of-stock {
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body class="text-gray-900">
+  <%- include("../../views/partials/user/header") %>
+
+  <div class="bg-white border-b">
+    <div class="max-w-7xl mx-auto px-6 py-3">
+      <div class="flex items-center text-sm text-gray-500">
+        <a href="/" class="hover:text-blue-600 transition">Home</a>
+        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+        <span class="text-gray-800 font-medium">Shopping Cart</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-6">
+      <h1 class="text-2xl font-light mb-8 tracking-tight">Shopping Cart</h1>
+      
+      <% if (cartItems && cartItems.length > 0) { %>
+        <div class="flex flex-col lg:flex-row gap-8">
+        
+          <div class="lg:w-2/3">
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+              <ul class="divide-y divide-gray-200">
+                <% cartItems.forEach(item => { 
+                  const product = item.product;
+                  const isOutOfStock = !product.isListed || 
+                                      product.status === 'Out of stock' || 
+                                      product.status === 'Discontinued' ||
+                                      !product.category.isListed;
+                  
+                
+                  const sizeObj = product.sizes.find(s => s.size === item.size);
+                  const isUnavailable = isOutOfStock || !sizeObj || sizeObj.quantity < item.quantity;
+                %>
+                  <li class="p-4 hover:bg-gray-50 transition-colors <%= isUnavailable ? 'out-of-stock' : '' %>">
+                    <div class="flex items-center space-x-4">
+                      <div class="flex-shrink-0 w-20 h-20 bg-gray-100 rounded overflow-hidden">
+                        <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>" class="w-full h-full object-cover">
+                      </div>
+                      
+                      <div class="flex-1 min-w-0">
+                        <a href="/product/<%= product._id %>" class="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                          <%= product.productName %>
+                        </a>
+                        <div class="mt-1 text-sm text-gray-500">
+                          <span>Size: <%= item.size %></span>
+                          <% if (isUnavailable) { %>
+                            <span class="ml-2 text-red-500 font-medium">
+                              <% if (!product.isListed || product.status === 'Discontinued') { %>
+                                Product unavailable
+                              <% } else if (product.status === 'Out of stock') { %>
+                                Out of stock
+                              <% } else if (!product.category.isListed) { %>
+                                Category unavailable
+                              <% } else if (!sizeObj) { %>
+                                Size unavailable
+                              <% } else if (sizeObj.quantity < item.quantity) { %>
+                                Only <%= sizeObj.quantity %> available
+                              <% } %>
+                            </span>
+                          <% } %>
+                        </div>
+                        <div class="mt-2 flex items-center">
+                          <span class="text-base font-medium text-gray-900">
+                            $<%= item.price %>
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div class="flex flex-col items-end space-y-3">
+                        <div class="quantity-control">
+                          <button 
+                            class="quantity-btn decrement-btn" 
+                            data-item-id="<%= item._id %>"
+                            <%= isUnavailable ? 'disabled' : '' %>
+                          >
+                            <i class="fas fa-minus text-xs"></i>
+                          </button>
+                          <input 
+                            type="text" 
+                            class="quantity-input" 
+                            value="<%= item.quantity %>" 
+                            readonly
+                            data-item-id="<%= item._id %>"
+                          >
+                          <button 
+                            class="quantity-btn increment-btn" 
+                            data-item-id="<%= item._id %>"
+                            <%= isUnavailable ? 'disabled' : '' %>
+                          >
+                            <i class="fas fa-plus text-xs"></i>
+                          </button>
+                        </div>
+                        
+                        <button 
+                          class="text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors remove-item-btn"
+                          data-item-id="<%= item._id %>"
+                        >
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                <% }); %>
+              </ul>
+            </div>
+            
+            <div class="mt-6 flex justify-between">
+              <a href="/shopall" class="text-blue-600 hover:text-blue-800 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> Continue Shopping
+              </a>
+              <button id="clearCartBtn" class="text-red-600 hover:text-red-800 flex items-center">
+                <i class="fas fa-trash mr-2"></i> Clear Cart
+              </button>
+            </div>
+          </div>
+          
+          <!-- Order Summary -->
+          <div class="lg:w-1/3">
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+              <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
+                
+                <div class="space-y-3 mb-6">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Subtotal</span>
+                    <span class="font-medium">$<%= totalAmount.toFixed(2) %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Shipping</span>
+                    <span class="font-medium">Calculated at checkout</span>
+                  </div>
+                  <% if (outOfStockItems.length > 0) { %>
+                    <div class="text-red-500 text-sm mt-2">
+                      <p><i class="fas fa-exclamation-circle mr-1"></i> Some items in your cart are unavailable and will be removed at checkout</p>
+                    </div>
+                  <% } %>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4 mb-6">
+                  <div class="flex justify-between items-center">
+                    <span class="text-lg font-medium text-gray-900">Total</span>
+                    <span class="text-xl font-bold">$<%= totalAmount.toFixed(2) %></span>
+                  </div>
+                </div>
+                
+                <a 
+                 
+                  href="/checkout"
+                  id="checkoutBtn"
+                  class="w-full bg-black text-white py-3 px-4 font-medium hover:bg-gray-800 transition-colors"
+                  <%= outOfStockItems.length > 0 ? 'disabled' : '' %>
+                >
+                  Proceed to Checkout
+                </a>
+                
+                <% if (outOfStockItems.length > 0) { %>
+                  <p class="text-red-500 text-sm mt-2 text-center">
+                    Please remove unavailable items before checkout
+                  </p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="empty-cart">
+          <div class="text-6xl text-gray-300 mb-4">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <h2 class="text-xl font-medium text-gray-700 mb-2">Your cart is empty</h2>
+          <p class="text-gray-500 mb-6">Add items to your cart to start shopping</p>
+          <a href="/shopall" class="bg-black text-white px-6 py-3 font-medium inline-block">
+            Explore Products
+          </a>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <%- include("../../views/partials/user/footer") %>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+     
+      const incrementBtns = document.querySelectorAll('.increment-btn');
+      incrementBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const itemId = this.getAttribute('data-item-id');
+          updateQuantity(itemId, 'increment');
+        });
+      });
+      
+     
+      const decrementBtns = document.querySelectorAll('.decrement-btn');
+      decrementBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const itemId = this.getAttribute('data-item-id');
+          updateQuantity(itemId, 'decrement');
+        });
+      });
+      
+    
+      const removeItemBtns = document.querySelectorAll('.remove-item-btn');
+      removeItemBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const itemId = this.getAttribute('data-item-id');
+          removeFromCart(itemId);
+        });
+      });
+      
+    
+      const clearCartBtn = document.getElementById('clearCartBtn');
+      if (clearCartBtn) {
+        clearCartBtn.addEventListener('click', clearCart);
+      }
+      
+      // Checkout button
+      const checkoutBtn = document.getElementById('checkoutBtn');
+      if (checkoutBtn) {
+        checkoutBtn.addEventListener('click', proceedToCheckout);
+      }
+    });
+    
+   
+    function updateQuantity(itemId, action) {
+      fetch('/cart/update-quantity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ itemId, action })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+         
+          const quantityInput = document.querySelector(`.quantity-input[data-item-id="${itemId}"]`);
+          if (quantityInput) {
+            quantityInput.value = data.newQuantity;
+          }
+          
+   
+          updateOrderSummary(data.cartTotal);
+        } else {
+          alert(data.message || 'Failed to update quantity');
+        }
+      })
+      .catch(error => {
+        console.error('Error updating quantity:', error);
+        alert('An error occurred. Please try again.');
+      });
+    }
+    
+    
+    function removeFromCart(itemId) {
+      if (!confirm('Are you sure you want to remove this item from your cart?')) return;
+      
+      fetch(`/cart/remove/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Remove item from DOM
+          const listItem = document.querySelector(`[data-item-id="${itemId}"]`).closest('li');
+          if (listItem) {
+            listItem.remove();
+            
+            
+            updateCartCount(data.cartCount);
+            
+           
+            updateOrderSummary(data.cartTotal);
+            
+            
+            if (data.cartCount === 0) {
+              location.reload();
+            }
+          }
+        } else {
+          alert(data.message || 'Failed to remove item');
+        }
+      })
+      .catch(error => {
+        console.error('Error removing item:', error);
+        alert('An error occurred. Please try again.');
+      });
+    }
+    
+   
+    function clearCart() {
+      if (!confirm('Are you sure you want to clear your entire cart?')) return;
+      
+      fetch('/cart/clear', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.message || 'Failed to clear cart');
+        }
+      })
+      .catch(error => {
+        console.error('Error clearing cart:', error);
+        alert('An error occurred. Please try again.');
+      });
+    }
+    
+   
+    function proceedToCheckout() {
+      fetch('/cart/validate-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/checkout';
+        } else {
+          alert(data.message || 'Unable to proceed to checkout');
+          if (data.unavailableItems && data.unavailableItems.length > 0) {
+            location.reload(); 
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error validating cart:', error);
+        alert('An error occurred. Please try again.');
+      });
+    }
+    
+  
+    function updateOrderSummary(total) {
+      const subtotalElement = document.querySelector('.flex.justify-between:first-child span:last-child');
+      const totalElement = document.querySelector('.flex.justify-between.items-center span:last-child');
+      
+      if (subtotalElement && totalElement) {
+        subtotalElement.textContent = `₹${total.toFixed(2)}`;
+        totalElement.textContent = `₹${total.toFixed(2)}`;
+      }
+    }
+    
+   
+    function updateCartCount(count) {
+      const cartCountElement = document.querySelector('.cart-count');
+      if (cartCountElement) {
+        cartCountElement.textContent = count;
+        
+      
+        if (count === 0) {
+          cartCountElement.classList.add('hidden');
+        } else {
+          cartCountElement.classList.remove('hidden');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

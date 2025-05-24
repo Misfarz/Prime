@@ -5,6 +5,7 @@ const CustomerController = require('../controllers/admin/CustomerController');
 const { adminAuth } = require('../middleware/auth');
 const categoryController = require('../controllers/admin/categoryController');
 const productController = require('../controllers/admin/productController');
+const orderController = require('../controllers/admin/orderController');
 const multer = require('multer');
 const path = require('path');
 
@@ -65,8 +66,16 @@ router.get('/products',adminAuth, productController.getProducts);
 router.get('/unlistProduct',adminAuth, productController.unlistProduct);
 router.get('/listProduct',adminAuth, productController.listProduct);
 
+// Order management routes
+router.get('/orders', adminAuth, orderController.loadOrders);
+router.get('/orders/:orderId', adminAuth, orderController.loadOrderDetails);
+
 router.post('/loginaction', adminController.login);
 router.post('/saveCategory', uploadCategory.single('image'), categoryController.saveCategory);
 router.post('/saveProduct', uploadProduct.array('productImage', 3), productController.saveProduct);
+
+// Order management API routes
+router.post('/orders/update-status', adminAuth, orderController.updateOrderStatus);
+router.post('/orders/verify-return', adminAuth, orderController.verifyReturnRequest);
 
 module.exports = router;

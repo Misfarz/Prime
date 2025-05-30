@@ -215,18 +215,34 @@
           </div>
           
           <div class="mb-6">
-            <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+            <% if (appliedOffer && appliedOffer > 0) { %>
+              <!-- Show offer price calculated from sale price (or regular price if no sale price) -->
               <div class="flex items-center">
-                <span class="text-xl font-medium text-gray-900">₹<%= product.salePrice %></span>
-                <span class="text-sm text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
+                <% 
+                  const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+                  const finalPrice = Math.round(basePrice * (1 - appliedOffer/100));
+                %>
+                <span class="text-xl font-medium text-gray-900">₹<%= finalPrice %></span>
+                <span class="text-sm text-gray-400 line-through ml-2">₹<%= basePrice %></span>
                 <span class="ml-2 bg-black text-white px-2 py-0.5 text-xs font-medium">
-                  <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>% OFF
+                  <%= appliedOffer %>% OFF
+                  <% if (offerType === 'product') { %>
+                    (Product Offer)
+                  <% } else if (offerType === 'category') { %>
+                    (Category Offer)
+                  <% } %>
                 </span>
               </div>
+            <% } else if (product.salePrice && product.salePrice < product.regularPrice) { %>
+              <!-- Show only sale price when no offer is applied but sale price exists -->
+              <div class="flex items-center">
+                <span class="text-xl font-medium text-gray-900">₹<%= product.salePrice %></span>
+              </div>
             <% } else { %>
+              <!-- Show regular price when no offers or sale price -->
               <span class="text-xl font-medium text-gray-900">₹<%= product.regularPrice %></span>
             <% } %>
-          </div>
+             </div>
           
           <div class="mb-6 border-t border-b border-gray-200 py-6">
             <h3 class="text-sm font-medium mb-4">SELECT SIZE</h3>
@@ -420,7 +436,7 @@
                   <% if (relatedTotalStock > 0) { %>
                     <span class="text-xs text-green-600 font-medium">In Stock</span>
                   <% } else { %>
-                    <span class="text-xs text-gray-400">Sold Out</span>
+                    <span class="text-xs text-red-400">Sold Out</span>
                   <% } %>
                 </div>
               </div>
@@ -442,7 +458,7 @@
 
   <%- include("../../views/partials/user/footer") %>
 
-  <!-- Toast Notification Container -->
+ 
   <div id="toastNotification" class="toast-notification">
     <i id="toastIcon" class="fas fa-check-circle"></i>
     <div id="toastMessage" class="toast-message">Item added to cart successfully!</div>
@@ -450,17 +466,16 @@
   </div>
 
   <script>
-  // Toast notification function
+ 
   function showToast(type, message) {
     const toast = document.getElementById('toastNotification');
     const icon = document.getElementById('toastIcon');
     const messageEl = document.getElementById('toastMessage');
     
-    // Set message
+ 
     messageEl.textContent = message;
     
-    // Set icon and color based on type
-    // Always use black background
+  
     toast.style.backgroundColor = '#000000';
     
     if (type === 'success') {
@@ -471,16 +486,16 @@
       icon.className = 'fas fa-exclamation-triangle';
     }
     
-    // Show toast
+  
     toast.classList.add('show');
     
-    // Hide after 3 seconds
+   
     setTimeout(() => {
       toast.classList.remove('show');
     }, 3000);
   }
   
-  // Close toast when clicking the X button
+ 
   document.getElementById('toastClose').addEventListener('click', function() {
     document.getElementById('toastNotification').classList.remove('show');
   });
@@ -575,7 +590,7 @@
       });
     });
     
-   //add to cart functionality
+   
     document.getElementById('addToCartBtn').addEventListener('click', function() {
       const selectedSize = document.querySelector('input[name="size"]:checked');
       const quantity = document.getElementById('quantity').value;
@@ -609,12 +624,12 @@
         
         if (data.success) {
       
-          // Update cart indicator in header
+         
           const wishlistIcon = document.querySelector('#wishlistIcon');
           if (wishlistIcon && wishlistIcon.nextElementSibling) {
             const cartIndicator = wishlistIcon.nextElementSibling;
             
-            // Add red dot indicator if not already present
+          
             if (!cartIndicator.querySelector('span')) {
               const indicatorDot = document.createElement('span');
               indicatorDot.className = 'absolute -top-1 -right-1 bg-red-500 rounded-full h-2 w-2';
@@ -622,12 +637,12 @@
             }
           }
           
-          // Show success toast notification
+         
           showToast('success', 'Product added to cart successfully!');
           
-          // Update cart count in session without reloading
+          
           if (data.cartCount) {
-            // If we have a cart count element, update it
+          
             const cartCountElement = document.querySelector('.cart-count');
             if (cartCountElement) {
               cartCountElement.textContent = data.cartCount;
@@ -635,7 +650,6 @@
             }
           }
         } else {
-          // Show error toast notification
           showToast('error', data.message || 'Failed to add product to cart');
         }
       })

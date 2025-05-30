@@ -41,6 +41,7 @@ const saveProduct = async (req, res) => {
       isNew,
       isFeatured,
       existingImages,
+      productOffer,
     } = req.body;
 
     if (
@@ -156,6 +157,7 @@ const saveProduct = async (req, res) => {
       isNew: isNew === "true",
       isFeatured: isFeatured === "true",
       status: "Available",
+      productOffer: productOffer ? parseFloat(productOffer) : 0,
     };
 
     let product;

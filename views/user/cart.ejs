@@ -164,9 +164,45 @@
                           <% } %>
                         </div>
                         <div class="mt-2 flex items-center">
-                          <span class="text-base font-medium text-gray-900">
-                            $<%= item.price %>
-                          </span>
+                          <% 
+                            // Determine if there's an offer to apply - always use the larger offer
+                            let appliedOffer = 0;
+                            let offerType = null;
+                            // product is already defined above, so we don't need to declare it again
+                            
+                            // Check if product has an offer
+                            if (product.productOffer && product.productOffer > 0) {
+                              appliedOffer = product.productOffer;
+                              offerType = 'product';
+                            }
+                            
+                            // Check if category has an offer and compare with product offer
+                            if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                              // Only update if category offer is larger than product offer
+                              if (product.category.categoryOffer > appliedOffer) {
+                                appliedOffer = product.category.categoryOffer;
+                                offerType = 'category';
+                              }
+                            }
+                            
+                            // Calculate the discounted price based on the appropriate base price
+                            if (appliedOffer > 0) {
+                              // Use sale price as base price if available, otherwise use regular price
+                              const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+                              const finalPrice = Math.round(basePrice * (1 - appliedOffer/100));
+                          %>
+                              <span class="text-base font-medium text-gray-900">₹<%= finalPrice %></span>
+                              <span class="text-xs text-gray-400 line-through ml-2">₹<%= basePrice %></span>
+                              <span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
+                                <%= appliedOffer %>% OFF
+                              </span>
+                          <% } else if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                              <!-- Show only sale price when no offer is applied -->
+                              <span class="text-base font-medium text-gray-900">₹<%= product.salePrice %></span>
+                          <% } else { %>
+                              <!-- Show regular price when no offers or sale price -->
+                              <span class="text-base font-medium text-gray-900">₹<%= product.regularPrice %></span>
+                          <% } %>
                         </div>
                       </div>
                       

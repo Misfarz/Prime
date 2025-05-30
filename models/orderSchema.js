@@ -98,7 +98,7 @@ const orderSchema = new Schema({
     shippingAddress: shippingAddressSchema,
     paymentMethod: {
         type: String,
-        enum: ['cod', 'card', 'Razorpay', 'wallet'],
+        enum: ['cod', 'card', 'razorpay', 'wallet'],
         required: true
     },
     paymentStatus: {
@@ -129,6 +129,9 @@ const orderSchema = new Schema({
         type: Number,
         default: 0
     },
+    couponCode: {
+        type: String
+    },
     total: {
         type: Number,
         required: true
@@ -153,15 +156,15 @@ const orderSchema = new Schema({
     }
 }, { timestamps: true });
 
-// Generate a unique order number before saving
+
 orderSchema.pre('save', async function(next) {
     if (!this.orderNumber) {
-        // Generate order number: ORD-YYYYMMDD-XXXX (where XXXX is a random number)
+        
         const date = new Date();
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+        const random = Math.floor(1000 + Math.random() * 9000); 
         
         this.orderNumber = `ORD-${year}${month}${day}-${random}`;
     }

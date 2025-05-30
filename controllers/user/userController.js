@@ -78,11 +78,13 @@ const loadHomepage = async (req, res) => {
             .limit(8);
 
   
-        const newProducts = await Product.find({ isListed: true, isNew: true })
+        const newProducts = await Product.find({ isListed: true, isnewproducts: true })
             .sort({ createdAt: -1 })
             .limit(8);
 
         const categories = await Category.find({isListed:true}).sort({createdAt:-1})
+        
+        const barcaproductid = "6822fd826fbe6496d49e9a06";
         
 
         return res.render('home', {
@@ -93,7 +95,8 @@ const loadHomepage = async (req, res) => {
             currentPage: page,
             totalPages,
             sort,
-            categories
+            categories,
+            barcaproductid
         });
     } catch (error) {
         console.error("Home page error:", error);
@@ -528,14 +531,14 @@ const loadProductDetail = async (req, res) => {
             return res.status(404).render('page-404', { message: 'Invalid product ID' });
         }
         
-     
+        // Fetch product with populated category to access category offer
         const product = await Product.findOne({ _id: productId, isListed: true }).populate('category');
         
         if (!product) {
             return res.status(404).render('page-404', { message: 'Product not found' });
         }
         
-   
+        // Calculate total stock
         let totalStock = 0;
         if (product.sizes && product.sizes.length > 0) {
             product.sizes.forEach(size => {
@@ -543,7 +546,26 @@ const loadProductDetail = async (req, res) => {
             });
         }
         
-   
+        // Handle offers
+        let appliedOffer = 0;
+        let offerType = null;
+        
+        // Check if product has an offer
+        if (product.productOffer && product.productOffer > 0) {
+            appliedOffer = product.productOffer;
+            offerType = 'product';
+        }
+        
+        // Check if category has an offer
+        if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+            // Apply the larger offer between product and category
+            if (product.category.categoryOffer > appliedOffer) {
+                appliedOffer = product.category.categoryOffer;
+                offerType = 'category';
+            }
+        }
+        
+        // Find related products
         const relatedProducts = await Product.find({
             category: product.category._id,
             _id: { $ne: product._id },
@@ -554,7 +576,9 @@ const loadProductDetail = async (req, res) => {
             user: user || null,
             product,
             totalStock,
-            relatedProducts
+            relatedProducts,
+            appliedOffer,
+            offerType
         });
     } catch (error) {
         console.error('Product detail page error:', error);

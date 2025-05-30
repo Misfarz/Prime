@@ -337,8 +337,30 @@
                 <i class="<%= user && user.whishlist && user.whishlist.includes(product._id.toString()) ? 'fas text-red-500' : 'far' %> fa-heart text-sm"></i>
               </button>
               <a href="/product/<%= product._id %>" class="group block" aria-label="<%= product.productName %>">
-                <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                  <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
+                <% 
+                  // Determine if there's an offer to apply
+                  let appliedOffer = 0;
+                  let offerType = null;
+                  
+                  // Check if product has an offer
+                  if (product.productOffer && product.productOffer > 0) {
+                    appliedOffer = product.productOffer;
+                    offerType = 'product';
+                  }
+                  
+                  // Check if category has an offer
+                  if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                    // Apply the larger offer between product and category
+                    if (product.category.categoryOffer > appliedOffer) {
+                      appliedOffer = product.category.categoryOffer;
+                      offerType = 'category';
+                    }
+                  }
+                  
+                  // Only show offer badge if there's a product or category offer
+                  if (appliedOffer > 0) { 
+                %>
+                  <div class="sale-badge"><%= appliedOffer %>% OFF</div>
                 <% } %>
                 <div class="product-image-container">
                   <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>"
@@ -348,11 +370,21 @@
                   <h3 class="text-md font-medium text-gray-900 mb-1"><%= product.productName %></h3>
                   <div class="flex justify-between items-center mt-3">
                     <div>
-                      <span class="text-sm font-medium text-gray-900">
-                        $<%= product.salePrice || product.regularPrice %>
-                      </span>
-                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                        <span class="text-xs text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
+                      <% 
+                        // Calculate the discounted price based on the appropriate base price
+                        if (appliedOffer > 0) {
+                          // Use sale price as base price if available, otherwise use regular price
+                          const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+                          const finalPrice = Math.round(basePrice * (1 - appliedOffer/100));
+                      %>
+                        <span class="text-sm font-medium text-gray-900">₹<%= finalPrice %></span>
+                        <span class="text-xs text-gray-400 line-through ml-2">₹<%= basePrice %></span>
+                      <% } else if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                        <!-- Show only sale price when no offer is applied -->
+                        <span class="text-sm font-medium text-gray-900">₹<%= product.salePrice %></span>
+                      <% } else { %>
+                        <!-- Show regular price when no offers or sale price -->
+                        <span class="text-sm font-medium text-gray-900">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
                     <% 

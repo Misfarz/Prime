@@ -40,7 +40,6 @@ function toggleWishlist(button, productId) {
       if (data.success) {
         wishlistIcon.classList.remove('far');
         wishlistIcon.classList.add('fas', 'text-red-500');
-        location.reload()
       } else {
         alert(data.message || 'Failed to add to wishlist');
       }

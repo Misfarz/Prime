@@ -34,6 +34,18 @@ const cartSchema = new Schema({
         required: true
     },
     items: [cartItemSchema],
+    coupon: {
+        code: {
+            type: String
+        },
+        discount: {
+            type: Number
+        },
+        couponId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Coupon'
+        }
+    },
     totalAmount: {
         type: Number,
         default: 0

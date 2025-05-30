@@ -153,8 +153,7 @@ const updateOrderStatus = async (req, res) => {
 const verifyReturnRequest = async (req, res) => {
     try {
         const { orderId, action } = req.body;
-        
-        // Find the order
+       
         const order = await Order.findById(orderId);
         
         if (!order) {
@@ -164,7 +163,7 @@ const verifyReturnRequest = async (req, res) => {
             });
         }
         
-        // Check if order is in returned status
+        
         if (order.orderStatus !== 'Returned') {
             return res.status(400).json({ 
                 success: false, 
@@ -173,7 +172,7 @@ const verifyReturnRequest = async (req, res) => {
         }
         
         if (action === 'approve') {
-            // Find the user
+           
             const user = await User.findById(order.user);
             
             if (!user) {
@@ -183,14 +182,14 @@ const verifyReturnRequest = async (req, res) => {
                 });
             }
             
-            // Update product stock for each returned item
+         
             for (const item of order.items) {
                 try {
                     const productId = item.product;
                     const size = item.size;
                     const quantity = item.quantity;
                     
-                    // Find the product
+                   
                     const product = await Product.findById(productId);
                     
                     if (!product) {
@@ -198,19 +197,19 @@ const verifyReturnRequest = async (req, res) => {
                         continue;
                     }
                     
-                    // Find the size index
+                 
                     const sizeIndex = product.sizes.findIndex(s => s.size === size);
                     
                     if (sizeIndex !== -1) {
-                        // Increase the quantity for the returned item
+                        
                         product.sizes[sizeIndex].quantity += quantity;
                         
-                        // Update product status if it was out of stock
+                        
                         if (product.status === 'Out of stock') {
                             product.status = 'Available';
                         }
                         
-                        // Save the updated product
+                      
                         await product.save();
                         
                         console.log(`Restored stock for ${product.productName}, size ${size}: ${product.sizes[sizeIndex].quantity}`);
@@ -222,7 +221,7 @@ const verifyReturnRequest = async (req, res) => {
                 }
             }
             
-            // Update order status
+        
             order.paymentStatus = 'Refunded';
             await order.save();
             
@@ -231,7 +230,7 @@ const verifyReturnRequest = async (req, res) => {
                 message: 'Return approved, amount refunded, and product stock restored' 
             });
         } else if (action === 'reject') {
-            // Reject the return request
+           
             order.orderStatus = 'Delivered';
             order.returnedAt = null;
             order.returnReason = null;

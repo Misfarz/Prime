@@ -55,7 +55,7 @@
       z-index: 10;
     }
 
-    /* Improved image container */
+   
     .product-image-container {
       position: relative;
       padding-top: 120%;
@@ -107,6 +107,7 @@
   <div class="max-w-7xl mx-auto px-6">
     <div class="text-center mb-14">
       <h2 class="text-3xl font-light text-gray-900 mb-4 tracking-tight">Shop by Category</h2>
+      <a href="/demo" class="text-bold bg-blue-600">demo page</a>
       <p class="text-gray-500 max-w-2xl mx-auto text-md">Discover authentic jerseys from the world's top leagues</p>
     </div>
 
@@ -134,20 +135,43 @@
 
 
 
-  <section id="featured" class="py-16 bg-[#fafafa]">
+ <section id="featured" class="py-16 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-3xl font-light mb-3 tracking-tight">Featured Jerseys</h2>
         <p class="text-gray-500 max-w-2xl mx-auto">Authentic jerseys worn by professional athletes</p>
       </div>
       
-
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
         <% if (featuredProducts && featuredProducts.length > 0) { %>
           <% featuredProducts.forEach(product => { %>
             <a href="/product/<%= product._id %>" class="group" aria-label="<%= product.productName %>">
               <div class="product-card">
-                <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                <% 
+                  // Determine if there's an offer to apply - always use the larger offer
+                  let appliedOffer = 0;
+                  let offerType = null;
+                  
+                  // Check if product has an offer
+                      // Check if category has an offer and compare with product offer
+                  if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                    // Only update if category offer is larger than product offer
+                    if (product.category.categoryOffer > appliedOffer) {
+                      appliedOffer = product.category.categoryOffer;
+                      offerType = 'category';
+                    }
+                  }
+                  
+                  if (product.productOffer && product.productOffer > 0) {
+                    appliedOffer = product.productOffer;
+                    offerType = 'product';
+                  }
+                  
+                  // If there's an offer, show the offer badge
+                  if (appliedOffer > 0) { 
+                %>
+                  <div class="sale-badge">SAVE <%= appliedOffer %>%</div>
+                <% } else if (product.salePrice && product.salePrice < product.regularPrice) { %>
                   <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
                 <% } %>
                 <div class="product-image-container">
@@ -158,10 +182,19 @@
                   <h3 class="text-md font-medium text-gray-900 mb-1"><%= product.productName %></h3>
                   <div class="flex justify-between items-center mt-3">
                     <div>
+                      <% 
+                        // Calculate the discounted price if there's an offer
+                        let displayPrice = product.regularPrice;
+                        if (appliedOffer > 0) {
+                          displayPrice = Math.round(product.regularPrice * (1 - appliedOffer/100));
+                        } else if (product.salePrice && product.salePrice < product.regularPrice) {
+                          displayPrice = product.salePrice;
+                        }
+                      %>
                       <span class="text-sm font-medium text-gray-900">
-                        ₹<%= product.salePrice || product.regularPrice %>
+                        ₹<%= displayPrice %>
                       </span>
-                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                      <% if (appliedOffer > 0 || (product.salePrice && product.salePrice < product.regularPrice)) { %>
                         <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
@@ -191,7 +224,6 @@
       </div>
     </div>
   </section>
-
 
   <section class="py-16 bg-white">
     <div class="max-w-7xl mx-auto px-6">
@@ -229,7 +261,7 @@
   </section>
 
   
-  <section id="new-arrivals" class="py-16 bg-[#fafafa]">
+ <section id="new-arrivals" class="py-16 bg-[#fafafa]">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-3xl font-light mb-3 tracking-tight">New Arrivals</h2>
@@ -241,7 +273,31 @@
           <% newProducts.forEach(product => { %>
             <a href="/product/<%= product._id %>" class="group" aria-label="<%= product.productName %>">
               <div class="product-card">
-                <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                <% 
+                  // Determine if there's an offer to apply
+                  let appliedOffer = 0;
+                  let offerType = null;
+                  
+                  // Check if product has an offer
+                  if (product.productOffer && product.productOffer > 0) {
+                    appliedOffer = product.productOffer;
+                    offerType = 'product';
+                  }
+                  
+                  // Check if category has an offer
+                  if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                    // Apply the larger offer between product and category
+                    if (product.category.categoryOffer > appliedOffer) {
+                      appliedOffer = product.category.categoryOffer;
+                      offerType = 'category';
+                    }
+                  }
+                  
+                  // If there's an offer, show the offer badge
+                  if (appliedOffer > 0) { 
+                %>
+                  <div class="sale-badge">SAVE <%= appliedOffer %>%</div>
+                <% } else if (product.salePrice && product.salePrice < product.regularPrice) { %>
                   <div class="sale-badge">SAVE <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>%</div>
                 <% } %>
                 <div class="product-image-container">
@@ -252,10 +308,19 @@
                   <h3 class="text-md font-medium text-gray-900 mb-1"><%= product.productName %></h3>
                   <div class="flex justify-between items-center mt-3">
                     <div>
+                      <% 
+                        // Calculate the discounted price if there's an offer
+                        let displayPrice = product.regularPrice;
+                        if (appliedOffer > 0) {
+                          displayPrice = Math.round(product.regularPrice * (1 - appliedOffer/100));
+                        } else if (product.salePrice && product.salePrice < product.regularPrice) {
+                          displayPrice = product.salePrice;
+                        }
+                      %>
                       <span class="text-sm font-medium text-gray-900">
-                        ₹<%= product.salePrice || product.regularPrice %>
+                        ₹<%= displayPrice %>
                       </span>
-                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
+                      <% if (appliedOffer > 0 || (product.salePrice && product.salePrice < product.regularPrice)) { %>
                         <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
@@ -286,16 +351,15 @@
     </div>
   </section>
 
-
   <section class="ft-bg h-[100vh] flex items-center text-white font-sans">
     <div class="max-w-7xl mx-auto px-6 py-10 w-full">
       <h2 class="text-4xl font-semibold text-white mb-4 tracking-tight">Supernova Rise 2</h2>
       <p class="text-lg text-white mb-6 max-w-md leading-relaxed">
         Running is never easy, but with the Supercomfort of Supernova, it's always nice.
       </p>
-      <button class="bg-white text-black font-medium px-6 py-3 rounded hover:bg-gray-200 transition-colors duration-200">
+      <a href="/product/<%=barcaproductid %>" class="bg-white text-black font-medium px-6 py-3 rounded hover:bg-gray-200 transition-colors duration-200">
         Shop now
-      </button>
+      </a>
     </div>
   </section>
 

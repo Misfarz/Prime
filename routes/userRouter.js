@@ -6,6 +6,7 @@ const wishlistController = require("../controllers/user/wishlistController");
 const cartController = require("../controllers/user/cartController");
 const checkoutController = require('../controllers/user/checkoutController');
 const orderController = require('../controllers/user/orderController');
+const couponController = require('../controllers/user/couponController');
 const { userAuth } = require('../middleware/auth');
 const passport = require('passport');
 const multer = require('multer');
@@ -31,7 +32,7 @@ const profileStorage = multer.diskStorage({
 
 
 const imageFilter = function (req, file, cb) {
-  // Check both the mimetype and the file extension
+  
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
   const allowedExtensions = /\.(jpg|jpeg|png|gif)$/i;
   
@@ -116,6 +117,10 @@ router.get('/checkout', userAuth, checkoutController.loadCheckout);
 router.post('/checkout/place-order', userAuth, checkoutController.placeOrder);
 router.get('/order-success/:orderId', userAuth, checkoutController.orderSuccess);
 
+// Coupon routes
+router.post('/coupons/apply', userAuth, couponController.applyCoupon);
+router.post('/coupons/remove', userAuth, couponController.removeCoupon);
+
 
 router.get('/orders', userAuth, orderController.loadOrders);
 router.get('/orders/:orderId', userAuth, orderController.loadOrderDetails);
@@ -186,5 +191,16 @@ router.get('/verify-reset-otp', userController.loadResetPasswordOTP);
 router.post('/verify-reset-otp', userController.verifyResetOTP);
 router.post('/resend-reset-otp', userController.resendResetOTP);
 router.post('/reset-password', userController.resetPassword);
+
+
+
+
+
+//demo routes for test
+const democontroller = require('../controllers/user/checkoutdemo')
+
+router.get('/demo', democontroller.loadDemoCheckout)
+
+
 
 module.exports = router;

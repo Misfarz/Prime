@@ -25,6 +25,11 @@ const categorySchema = new Schema({
       type: String,
       required: [true, "Category image is required"],
     },
+    categoryOffer: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
 
 
 }, { timestamps: true });

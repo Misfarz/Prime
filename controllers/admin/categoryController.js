@@ -23,7 +23,7 @@ exports.getCategories = async (req, res) => {
 
 exports.saveCategory = async (req, res) => {
     try {
-        const { categoryId, name, description, subcategories } = req.body;
+        const { categoryId, name, description, subcategories, categoryOffer } = req.body;
         const image = req.file ? `/uploads/categories/${req.file.filename}` : undefined;
 
         let subcats = subcategories ? subcategories.split(',').map(s => s.trim()).filter(s => s) : [];
@@ -33,15 +33,18 @@ exports.saveCategory = async (req, res) => {
       _id:{$ne:categoryId}
     });
 
-
-
     if (existingCategoryName) {
       return res.status(400).send("category already exists");
     }
 
         if (categoryId) {
         
-            const updateData = { name, description, subcategories: subcats };
+            const updateData = { 
+                name, 
+                description, 
+                subcategories: subcats,
+                categoryOffer: categoryOffer ? parseFloat(categoryOffer) : 0
+            };
             if (image) updateData.image = image;
             await Category.findByIdAndUpdate(categoryId, updateData);
         } else {
@@ -52,7 +55,8 @@ exports.saveCategory = async (req, res) => {
                 description,
                 subcategories: subcats,
                 image,
-                isListed: true
+                isListed: true,
+                categoryOffer: categoryOffer ? parseFloat(categoryOffer) : 0
             });
             await category.save();
         }

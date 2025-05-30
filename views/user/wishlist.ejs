@@ -118,14 +118,48 @@
                     </a>
                     <p class="mt-1 text-sm text-gray-500 line-clamp-2"><%= product.description || 'No description available' %></p>
                     <div class="mt-2 flex items-center">
+                      <% 
+                        // Determine if there's an offer to apply - always use the larger offer
+                        let appliedOffer = 0;
+                        let offerType = null;
+                        
+                        // Check if product has an offer
+                        if (product.productOffer && product.productOffer > 0) {
+                          appliedOffer = product.productOffer;
+                          offerType = 'product';
+                        }
+                        
+                        // Check if category has an offer and compare with product offer
+                        if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                          // Only update if category offer is larger than product offer
+                          if (product.category.categoryOffer > appliedOffer) {
+                            appliedOffer = product.category.categoryOffer;
+                            offerType = 'category';
+                          }
+                        }
+                        
+                        // Calculate the discounted price if there's an offer
+                        let displayPrice = product.regularPrice;
+                        if (appliedOffer > 0) {
+                          displayPrice = Math.round(product.regularPrice * (1 - appliedOffer/100));
+                        } else if (product.salePrice && product.salePrice < product.regularPrice) {
+                          displayPrice = product.salePrice;
+                        }
+                      %>
                       <span class="text-base font-medium text-gray-900">
-                        $<%= product.salePrice || product.regularPrice %>
+                        ₹<%= displayPrice %>
                       </span>
-                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                        <span class="text-sm text-gray-400 line-through ml-2">$<%= product.regularPrice %></span>
-                        <span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
-                          <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>% OFF
-                        </span>
+                      <% if (appliedOffer > 0 || (product.salePrice && product.salePrice < product.regularPrice)) { %>
+                        <span class="text-sm text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
+                        <% if (appliedOffer > 0) { %>
+                          <span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
+                            <%= appliedOffer %>% OFF
+                          </span>
+                        <% } else { %>
+                          <span class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded">
+                            <%= Math.round((1 - product.salePrice/product.regularPrice)*100) %>% OFF
+                          </span>
+                        <% } %>
                       <% } %>
                     </div>
                   </div>

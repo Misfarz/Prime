@@ -103,8 +103,37 @@ const addToCart = async (req, res) => {
             }
         }
 
-     
-        const price = product.salePrice || product.regularPrice;
+        // Calculate the price using the same logic as the frontend
+        // First determine if there's an offer to apply
+        let appliedOffer = 0;
+        let offerType = null;
+        
+        // Check if product has an offer
+        if (product.productOffer && product.productOffer > 0) {
+            appliedOffer = product.productOffer;
+            offerType = 'product';
+        }
+        
+        // Check if category has an offer and compare with product offer
+        if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+            // Only update if category offer is larger than product offer
+            if (product.category.categoryOffer > appliedOffer) {
+                appliedOffer = product.category.categoryOffer;
+                offerType = 'category';
+            }
+        }
+        
+        // Calculate the final price based on offers and sale price
+        let price;
+        if (appliedOffer > 0) {
+            // Use sale price as base price if available, otherwise use regular price
+            const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+            price = Math.round(basePrice * (1 - appliedOffer/100));
+        } else if (product.salePrice && product.salePrice < product.regularPrice) {
+            price = product.salePrice;
+        } else {
+            price = product.regularPrice;
+        }
 
         
         const existingItemIndex = cart.items.findIndex(
@@ -326,12 +355,45 @@ const loadCart = async (req, res) => {
     
         const validItems = cart.items.filter(item => item.product !== null);
         
+        // Update prices for all valid items using the consistent pricing logic
+        for (const item of validItems) {
+            const product = item.product;
+            
+            // Determine if there's an offer to apply
+            let appliedOffer = 0;
+            let offerType = null;
+            
+            // Check if product has an offer
+            if (product.productOffer && product.productOffer > 0) {
+                appliedOffer = product.productOffer;
+                offerType = 'product';
+            }
+            
+            // Check if category has an offer and compare with product offer
+            if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                // Only update if category offer is larger than product offer
+                if (product.category.categoryOffer > appliedOffer) {
+                    appliedOffer = product.category.categoryOffer;
+                    offerType = 'category';
+                }
+            }
+            
+            // Calculate the final price based on offers and sale price
+            if (appliedOffer > 0) {
+                // Use sale price as base price if available, otherwise use regular price
+                const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+                item.price = Math.round(basePrice * (1 - appliedOffer/100));
+            } else if (product.salePrice && product.salePrice < product.regularPrice) {
+                item.price = product.salePrice;
+            } else {
+                item.price = product.regularPrice;
+            }
+        }
         
         const outOfStockItems = [];
         const availableItems = validItems.filter(item => {
             const product = item.product;
             const sizeObj = product.sizes.find(s => s.size === item.size);
-            
             
             const isUnavailable = !product.isListed || 
                                  product.status === 'Out of stock' || 
@@ -347,7 +409,10 @@ const loadCart = async (req, res) => {
             return !isUnavailable;
         });
 
-      
+        // Save the updated prices to the database
+        await cart.save();
+        
+        // Calculate total with updated prices
         const totalAmount = availableItems.reduce((total, item) => {
             return total + (item.price * item.quantity);
         }, 0);
@@ -448,9 +513,45 @@ const updateCartItemQuantity = async (req, res) => {
         }
 
        
+        // Update the quantity
         cart.items[itemIndex].quantity = newQuantity;
         
-      
+        // Recalculate the price using the same logic as in addToCart
+        // First determine if there's an offer to apply
+        let appliedOffer = 0;
+        let offerType = null;
+        
+        // Check if product has an offer
+        if (product.productOffer && product.productOffer > 0) {
+            appliedOffer = product.productOffer;
+            offerType = 'product';
+        }
+        
+        // Check if category has an offer and compare with product offer
+        if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+            // Only update if category offer is larger than product offer
+            if (product.category.categoryOffer > appliedOffer) {
+                appliedOffer = product.category.categoryOffer;
+                offerType = 'category';
+            }
+        }
+        
+        // Calculate the final price based on offers and sale price
+        let updatedPrice;
+        if (appliedOffer > 0) {
+            // Use sale price as base price if available, otherwise use regular price
+            const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+            updatedPrice = Math.round(basePrice * (1 - appliedOffer/100));
+        } else if (product.salePrice && product.salePrice < product.regularPrice) {
+            updatedPrice = product.salePrice;
+        } else {
+            updatedPrice = product.regularPrice;
+        }
+        
+        // Update the price in the cart item
+        cart.items[itemIndex].price = updatedPrice;
+        
+        // Recalculate the total amount
         cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
         cart.updatedAt = Date.now();
         
@@ -505,9 +606,57 @@ const removeFromCart = async (req, res) => {
         }
 
   
+        // Remove the item from the cart
         cart.items.splice(itemIndex, 1);
         
+        // If there are remaining items in the cart, update their prices using the consistent pricing logic
+        if (cart.items.length > 0) {
+            // Populate product details for each item to calculate correct prices
+            await Cart.populate(cart, {
+                path: 'items.product',
+                populate: {
+                    path: 'category'
+                }
+            });
+            
+            // Update prices for all items using the consistent pricing logic
+            for (const item of cart.items) {
+                const product = item.product;
+                if (!product) continue; // Skip if product not found
+                
+                // Determine if there's an offer to apply
+                let appliedOffer = 0;
+                let offerType = null;
+                
+                // Check if product has an offer
+                if (product.productOffer && product.productOffer > 0) {
+                    appliedOffer = product.productOffer;
+                    offerType = 'product';
+                }
+                
+                // Check if category has an offer and compare with product offer
+                if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                    // Only update if category offer is larger than product offer
+                    if (product.category.categoryOffer > appliedOffer) {
+                        appliedOffer = product.category.categoryOffer;
+                        offerType = 'category';
+                    }
+                }
+                
+                // Calculate the final price based on offers and sale price
+                if (appliedOffer > 0) {
+                    // Use sale price as base price if available, otherwise use regular price
+                    const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+                    item.price = Math.round(basePrice * (1 - appliedOffer/100));
+                } else if (product.salePrice && product.salePrice < product.regularPrice) {
+                    item.price = product.salePrice;
+                } else {
+                    item.price = product.regularPrice;
+                }
+            }
+        }
         
+        // Recalculate the total amount with updated prices
         cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
         cart.updatedAt = Date.now();
         
@@ -602,8 +751,59 @@ const validateCartForCheckout = async (req, res) => {
         if (!cart || cart.items.length === 0) {
             return res.status(400).json({ success: false, message: 'Your cart is empty' });
         }
-
-       
+        
+        // Update prices for all items using the consistent pricing logic
+        let pricesUpdated = false;
+        for (const item of cart.items) {
+            if (!item.product) continue; // Skip if product not found
+            
+            const product = item.product;
+            
+            // Determine if there's an offer to apply
+            let appliedOffer = 0;
+            let offerType = null;
+            
+            // Check if product has an offer
+            if (product.productOffer && product.productOffer > 0) {
+                appliedOffer = product.productOffer;
+                offerType = 'product';
+            }
+            
+            // Check if category has an offer and compare with product offer
+            if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
+                // Only update if category offer is larger than product offer
+                if (product.category.categoryOffer > appliedOffer) {
+                    appliedOffer = product.category.categoryOffer;
+                    offerType = 'category';
+                }
+            }
+            
+            // Calculate the final price based on offers and sale price
+            let updatedPrice;
+            if (appliedOffer > 0) {
+                // Use sale price as base price if available, otherwise use regular price
+                const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
+                updatedPrice = Math.round(basePrice * (1 - appliedOffer/100));
+            } else if (product.salePrice && product.salePrice < product.regularPrice) {
+                updatedPrice = product.salePrice;
+            } else {
+                updatedPrice = product.regularPrice;
+            }
+            
+            // Update the price if it has changed
+            if (item.price !== updatedPrice) {
+                item.price = updatedPrice;
+                pricesUpdated = true;
+            }
+        }
+        
+        // If prices were updated, recalculate the total and save the cart
+        if (pricesUpdated) {
+            cart.totalAmount = cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+            await cart.save();
+        }
+        
+        // Check for unavailable items
         const unavailableItems = [];
         
         for (const item of cart.items) {

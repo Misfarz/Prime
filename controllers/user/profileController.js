@@ -103,7 +103,7 @@ const updateProfile = async (req, res) => {
             });
         }
         
-        // Phone validation (if provided)
+       
         if (phone && !/^\d{10}$/.test(phone)) {
             return res.render('edit-profile', {
                 user: { ...req.session.user, name, phone },
@@ -111,20 +111,20 @@ const updateProfile = async (req, res) => {
             });
         }
         
-        // Update profile image if uploaded
+     
         const updateData = { name, phone };
         if (req.file) {
             updateData.profileImage = `/uploads/profiles/${req.file.filename}`;
         }
         
-        // Update user in database
+     
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             updateData,
             { new: true }
         );
         
-        // Update session
+     
         req.session.user = {
             ...req.session.user,
             name: updatedUser.name,
@@ -142,7 +142,7 @@ const updateProfile = async (req, res) => {
     }
 };
 
-// Password management
+
 const loadChangePassword = async (req, res) => {
     try {
         const user = req.session.user;
@@ -152,7 +152,7 @@ const loadChangePassword = async (req, res) => {
         
         const userData = await User.findById(user._id);
         
-        // If user signed up with Google, they don't have a password
+        
         if (userData.googleId && !userData.password) {
             return res.render('profile', {
                 user: userData,
@@ -176,11 +176,10 @@ const changePassword = async (req, res) => {
     try {
         const userId = req.session.user._id;
         const { currentPassword, newPassword, confirmPassword } = req.body;
-        
-        // Fetch user
+ 
         const user = await User.findById(userId);
         
-        // Check if user exists
+      
         if (!user) {
             return res.render('change-password', {
                 user: req.session.user,
@@ -188,8 +187,7 @@ const changePassword = async (req, res) => {
                 success: null
             });
         }
-        
-        // If user signed up with Google and doesn't have a password
+       
         if (user.googleId && !user.password) {
             return res.render('profile', {
                 user: user,
@@ -198,7 +196,7 @@ const changePassword = async (req, res) => {
             });
         }
         
-        // Verify current password
+     
         const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordValid) {
             return res.render('change-password', {
@@ -208,7 +206,7 @@ const changePassword = async (req, res) => {
             });
         }
         
-        // Validate new password
+     
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(newPassword)) {
             return res.render('change-password', {
@@ -218,7 +216,7 @@ const changePassword = async (req, res) => {
             });
         }
         
-        // Check if new passwords match
+     
         if (newPassword !== confirmPassword) {
             return res.render('change-password', {
                 user: req.session.user,
@@ -227,13 +225,12 @@ const changePassword = async (req, res) => {
             });
         }
         
-        // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         
-        // Update password
+      
         await User.findByIdAndUpdate(userId, { password: hashedPassword });
         
-        // Return success
+   
         res.render('change-password', {
             user: req.session.user,
             error: null,
@@ -249,7 +246,7 @@ const changePassword = async (req, res) => {
     }
 };
 
-// Address management
+
 const loadAddressManagement = async (req, res) => {
     try {
         const user = req.session.user;
@@ -285,11 +282,10 @@ const addAddress = async (req, res) => {
             state,
             postalCode,
             country,
-            isDefault,
-            redirectTo
+            isDefault
         } = req.body;
         
-        // Validation
+   
         if (!fullName || !phone || !addressLine1 || !city || !state || !postalCode || !country) {
             const userData = await User.findById(userId).populate('addresses');
             return res.render('address-management', {
@@ -301,7 +297,7 @@ const addAddress = async (req, res) => {
             });
         }
         
-        // Phone validation
+       
         if (!/^\d{10}$/.test(phone)) {
             const userData = await User.findById(userId).populate('addresses');
             return res.render('address-management', {
@@ -313,11 +309,11 @@ const addAddress = async (req, res) => {
             });
         }
         
-        // Check if this is the first address (should be default)
+      
         const addressCount = await Address.countDocuments({ userId: userId });
         const makeDefault = isDefault === 'on' || addressCount === 0;
         
-        // If this is set as default, unset any other default addresses first
+        
         if (makeDefault) {
             await Address.updateMany(
                 { userId: userId },
@@ -325,7 +321,7 @@ const addAddress = async (req, res) => {
             );
         }
         
-        // Create new address
+    
         const newAddress = new Address({
             userId: userId,
             fullName,
@@ -339,21 +335,18 @@ const addAddress = async (req, res) => {
             isDefault: makeDefault
         });
         
-        // Save address
+  
         const savedAddress = await newAddress.save();
         
-        // Add address to user's addresses array
+      
         await User.findByIdAndUpdate(
             userId,
             { $addToSet: { addresses: savedAddress._id } }
         );
         
-        // Redirect based on redirectTo parameter or default to address management
-        if (redirectTo && redirectTo === 'checkout') {
-            res.redirect('/checkout');
-        } else {
-            res.redirect('/profile/addresses');
-        }
+        // Redirect to the specified page or default to profile/addresses
+        const redirectUrl = req.body.redirect || '/profile/addresses';
+        res.redirect(redirectUrl);
     } catch (error) {
         console.error("Failed to add address:", error);
         res.status(500).render("page-404", { message: "Server Error" });
@@ -373,11 +366,10 @@ const editAddress = async (req, res) => {
             state,
             postalCode,
             country,
-            isDefault,
-            redirectTo
+            isDefault
         } = req.body;
         
-        // Validation
+       
         if (!fullName || !phone || !addressLine1 || !city || !state || !postalCode || !country) {
             const userData = await User.findById(userId).populate('addresses');
             return res.render('address-management', {
@@ -389,7 +381,7 @@ const editAddress = async (req, res) => {
             });
         }
         
-        // Phone validation
+        
         if (!/^\d{10}$/.test(phone)) {
             const userData = await User.findById(userId).populate('addresses');
             return res.render('address-management', {
@@ -401,7 +393,7 @@ const editAddress = async (req, res) => {
             });
         }
         
-        // If making this address default, unset any other default addresses first
+      
         const makeDefault = isDefault === 'on';
         if (makeDefault) {
             await Address.updateMany(
@@ -410,7 +402,7 @@ const editAddress = async (req, res) => {
             );
         }
         
-        // Update address
+  
         const updatedAddress = await Address.findOneAndUpdate(
             { _id: addressId, userId: userId },
             {
@@ -427,7 +419,7 @@ const editAddress = async (req, res) => {
             { new: true }
         );
         
-        // If not found or not belonging to user
+      
         if (!updatedAddress) {
             const userData = await User.findById(userId).populate('addresses');
             return res.render('address-management', {
@@ -439,12 +431,9 @@ const editAddress = async (req, res) => {
             });
         }
         
-        // Redirect based on redirectTo parameter or default to address management
-        if (redirectTo && redirectTo === 'checkout') {
-            res.redirect('/checkout');
-        } else {
-            res.redirect('/profile/addresses');
-        }
+        // Redirect to the specified page or default to profile/addresses
+        const redirectUrl = req.body.redirect || '/profile/addresses';
+        res.redirect(redirectUrl);
     } catch (error) {
         console.error("Failed to edit address:", error);
         res.status(500).render("page-404", { message: "Server Error" });
@@ -456,10 +445,10 @@ const deleteAddress = async (req, res) => {
         const userId = req.session.user._id;
         const addressId = req.params.addressId;
         
-        // Find address
+
         const address = await Address.findOne({ _id: addressId, userId: userId });
         
-        // If not found or not belonging to user
+      
         if (!address) {
             const userData = await User.findById(userId).populate('addresses');
             return res.render('address-management', {
@@ -471,19 +460,18 @@ const deleteAddress = async (req, res) => {
             });
         }
         
-        // Check if this was a default address
+     
         const wasDefault = address.isDefault;
         
-        // Remove address from user's addresses array
+
         await User.findByIdAndUpdate(
             userId,
             { $pull: { addresses: addressId } }
         );
         
-        // Delete address
         await Address.findByIdAndDelete(addressId);
         
-        // If the deleted address was default, set another address as default if any exist
+     
         if (wasDefault) {
             const firstAddress = await Address.findOne({ userId: userId });
             if (firstAddress) {
@@ -491,7 +479,7 @@ const deleteAddress = async (req, res) => {
             }
         }
         
-        // Redirect to address management
+       
         res.redirect('/profile/addresses');
     } catch (error) {
         console.error("Failed to delete address:", error);
@@ -499,41 +487,44 @@ const deleteAddress = async (req, res) => {
     }
 };
 
-// Get address data for editing
 const getAddressData = async (req, res) => {
     try {
         const userId = req.session.user._id;
         const addressId = req.params.addressId;
         
-        // Find address
+        // Find the address by ID and ensure it belongs to the current user
         const address = await Address.findOne({ _id: addressId, userId: userId });
         
-        // If not found or not belonging to user
         if (!address) {
             return res.status(404).json({ error: 'Address not found' });
         }
         
-        // Return address data
-        res.json(address);
+        // Return the address data as JSON
+        res.json({
+            fullName: address.fullName,
+            addressLine1: address.addressLine1,
+            addressLine2: address.addressLine2 || '',
+            city: address.city,
+            state: address.state,
+            postalCode: address.postalCode,
+            country: address.country,
+            phone: address.phone,
+            isDefault: address.isDefault
+        });
     } catch (error) {
         console.error("Failed to get address data:", error);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
-// Wishlist management moved to wishlistController.js
 
 module.exports = {
-    // Profile management
+    
     loadProfile,
     loadEditProfile,
     updateProfile,
-    
-    // Password management
     loadChangePassword,
-    changePassword,
-    
-    // Address management
+    changePassword, 
     loadAddressManagement,
     addAddress,
     editAddress,

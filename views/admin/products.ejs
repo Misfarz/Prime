@@ -130,6 +130,7 @@
                     <th class="text-left py-3 px-4 font-medium">Image</th>
                     <th class="text-left py-3 px-4 font-medium">Stock</th>
                     <th class="text-left py-3 px-4 font-medium">Price</th>
+                    <th class="text-left py-3 px-4 font-medium">Offer</th>
                     <th class="text-left py-3 px-4 font-medium">Category</th>
                     <th class="text-left py-3 px-4 font-medium">Sizes</th>
                     <th class="text-left py-3 px-4 font-medium">Action</th>
@@ -155,6 +156,19 @@
                     </td>
                     <td class="py-4 px-4">
                       <%= product.salePrice || product.regularPrice %>
+                    </td>
+                    <td class="py-4 px-4">
+                      <% if (product.productOffer && product.productOffer > 0) { %>
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                          <%= product.productOffer %>% (Product)
+                        </span>
+                      <% } else if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) { %>
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                          <%= product.category.categoryOffer %>% (Category)
+                        </span>
+                      <% } else { %>
+                        <span class="text-gray-400 text-xs">No offer</span>
+                      <% } %>
                     </td>
                     <td class="py-4 px-4"><%= product.category.name %></td>
                     <td class="py-4 px-4">
@@ -254,6 +268,14 @@
                   <input type="number" id="salePrice" name="salePrice" min="0"
                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition">
                 </div>
+              </div>
+              
+              <div>
+                <label for="productOffer" class="block text-sm font-medium mb-1">Product Offer (% off)</label>
+                <input type="number" id="productOffer" name="productOffer" min="0" max="100" step="0.1"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition"
+                       placeholder="Enter percentage discount (e.g., 10 for 10% off)">
+                <p class="text-xs text-gray-500 mt-1">This offer will be applied directly to the product. If a category offer is also available, the larger discount will be applied.</p>
               </div>
               
               <div id="sizesContainer">
@@ -389,6 +411,7 @@
 
           document.getElementById('regularPrice').value = product.regularPrice || '';
           document.getElementById('salePrice').value = product.salePrice || '';
+          document.getElementById('productOffer').value = product.productOffer || '';
           document.getElementById('productImage').required = false;
 
           // Set isNew radio buttons
@@ -785,6 +808,7 @@
         formData.append('subcategory', document.getElementById('subcategory').value);
         formData.append('regularPrice', document.getElementById('regularPrice').value);
         formData.append('salePrice', document.getElementById('salePrice').value || '');
+        formData.append('productOffer', document.getElementById('productOffer').value || '0');
         formData.append('status', 'Available');
         formData.append('sizes', JSON.stringify(sizes));
         

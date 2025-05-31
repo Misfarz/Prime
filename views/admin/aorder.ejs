@@ -53,7 +53,22 @@
         
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-semibold">Order Management</h1>
+            <div class="flex items-center">
+              <h1 class="text-2xl font-semibold">Order Management</h1>
+              
+              <!-- Return Verification Filter -->
+              <div class="ml-4">
+                <a href="/admin/orders?returnFilter=pending" class="<%= returnFilter === 'pending' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700' %> px-3 py-1 rounded-full text-sm font-medium inline-flex items-center">
+                  <i class="fas fa-bell mr-1"></i>
+                  Pending Return Verifications
+                  <% if (returnFilter === 'pending') { %>
+                    <a href="/admin/orders" class="ml-2 text-white">
+                      <i class="fas fa-times-circle"></i>
+                    </a>
+                  <% } %>
+                </a>
+              </div>
+            </div>
             <div class="flex space-x-2">
               <!-- Search Form -->
               <form action="/admin/orders" method="GET" class="flex">
@@ -180,14 +195,6 @@
                         <a href="/admin/orders/<%= order._id %>" class="text-blue-600 hover:text-blue-900 mr-3">
                           <i class="fas fa-eye"></i> View
                         </a>
-                        <% if (order.orderStatus === 'Returned') { %>
-                          <button 
-                            onclick="verifyReturn('<%= order._id %>')" 
-                            class="text-green-600 hover:text-green-900"
-                          >
-                            <i class="fas fa-check-circle"></i> Verify Return
-                          </button>
-                        <% } %>
                       </td>
                     </tr>
                   <% }) %>
@@ -243,100 +250,6 @@
       </div>
     </div>
 
-    
-    <div id="returnModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 class="text-xl font-semibold mb-4">Verify Return Request</h2>
-        <p class="mb-4">Do you want to approve or reject this return request?</p>
-        <p class="text-sm text-gray-500 mb-4">Approving will refund the amount to the customer's wallet.</p>
-        <div class="flex justify-end space-x-3">
-          <button onclick="closeReturnModal()" class="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100">
-            Cancel
-          </button>
-          <button onclick="rejectReturn()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-            Reject
-          </button>
-          <button onclick="approveReturn()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
-            Approve
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <script>
-      let currentOrderId = null;
-      
-      function verifyReturn(orderId) {
-        currentOrderId = orderId;
-        document.getElementById('returnModal').classList.remove('hidden');
-      }
-      
-      function closeReturnModal() {
-        document.getElementById('returnModal').classList.add('hidden');
-        currentOrderId = null;
-      }
-      
-      function approveReturn() {
-        if (!currentOrderId) return;
-        
-        fetch('/admin/orders/verify-return', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            orderId: currentOrderId,
-            action: 'approve'
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert(data.message);
-            window.location.reload();
-          } else {
-            alert(data.message || 'Failed to approve return');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('An error occurred while processing your request');
-        })
-        .finally(() => {
-          closeReturnModal();
-        });
-      }
-      
-      function rejectReturn() {
-        if (!currentOrderId) return;
-        
-        fetch('/admin/orders/verify-return', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            orderId: currentOrderId,
-            action: 'reject'
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert(data.message);
-            window.location.reload();
-          } else {
-            alert(data.message || 'Failed to reject return');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('An error occurred while processing your request');
-        })
-        .finally(() => {
-          closeReturnModal();
-        });
-      }
-    </script>
   </body>
 </html>

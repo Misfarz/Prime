@@ -97,7 +97,29 @@
                 
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="text-sm font-medium text-gray-500 mb-1">Payment Status</h3>
-                    <p class="font-medium"><%= order.paymentStatus %></p>
+                    <% 
+                    let paymentStatusText = order.paymentStatus;
+                    let paymentStatusClass = '';
+                    
+                    if (order.paymentStatus === 'Refunded') {
+                        if (order.paymentMethod === 'wallet' || 
+                           (order.orderStatus === 'Returned' && order.returnStatus === 'Approved') || 
+                            order.orderStatus === 'Cancelled') {
+                            paymentStatusText = 'Refunded to Wallet';
+                            paymentStatusClass = 'text-green-600';
+                        }
+                    } else if (order.paymentStatus === 'Paid') {
+                        paymentStatusClass = 'text-green-600';
+                    }
+                    %>
+                    <p class="font-medium <%= paymentStatusClass %>"><%= paymentStatusText %></p>
+                    <% if (order.paymentStatus === 'Refunded' && 
+                          (order.paymentMethod === 'wallet' || order.orderStatus === 'Cancelled' || 
+                          (order.orderStatus === 'Returned' && order.returnStatus === 'Approved'))) { %>
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-check-circle mr-1"></i> Amount credited to your wallet
+                        </p>
+                    <% } %>
                 </div>
                 
                 <div class="p-4 bg-gray-50 rounded-lg">

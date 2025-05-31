@@ -105,6 +105,7 @@
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
@@ -148,6 +149,37 @@
                                                 %>
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= statusColor %>">
                                                     <%= order.orderStatus %>
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <% 
+                                                let paymentStatusClass = '';
+                                                let paymentStatusText = order.paymentStatus;
+                                                
+                                                switch(order.paymentStatus) {
+                                                    case 'Paid':
+                                                        paymentStatusClass = 'bg-green-100 text-green-800';
+                                                        break;
+                                                    case 'Pending':
+                                                        paymentStatusClass = 'bg-yellow-100 text-yellow-800';
+                                                        break;
+                                                    case 'Failed':
+                                                        paymentStatusClass = 'bg-red-100 text-red-800';
+                                                        break;
+                                                    case 'Refunded':
+                                                        paymentStatusClass = 'bg-blue-100 text-blue-800';
+                                                        if (order.paymentMethod === 'wallet' || 
+                                                           (order.orderStatus === 'Returned' && order.returnStatus === 'Approved') || 
+                                                            order.orderStatus === 'Cancelled') {
+                                                            paymentStatusText = 'Refunded to Wallet';
+                                                        }
+                                                        break;
+                                                    default:
+                                                        paymentStatusClass = 'bg-gray-100 text-gray-800';
+                                                }
+                                                %>
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= paymentStatusClass %>">
+                                                    <%= paymentStatusText %>
                                                 </span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">

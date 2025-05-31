@@ -1,6 +1,8 @@
 const Order = require('../../models/orderSchema');
 const User = require('../../models/userSchema');
 const { Product } = require('../../models/productSchema');
+const WalletTransaction = require('../../models/walletTransactionSchema');
+const { sendWalletNotification } = require('../../utils/walletNotifier');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -145,15 +147,80 @@ const cancelOrder = async (req, res) => {
         }
         
        
-        if (order.paymentStatus === 'Paid') {
-            order.paymentStatus = 'Refunded';
+        if (order.paymentStatus === 'Paid' || order.paymentMethod === 'wallet') {
+            try {
+                // Add the refunded amount to the user's wallet
+                const user = await User.findById(userId);
+                if (!user) {
+                    throw new Error(`User not found for refund: ${userId}`);
+                }
+                
+                console.log(`Processing refund for cancelled order ${order._id}. Current wallet: ${user.wallet}, Order total: ${order.total}`);
+                
+                // Update user wallet balance with proper type conversion
+                const currentWallet = Number(user.wallet || 0);
+                const refundAmount = Number(order.total);
+                
+                if (isNaN(currentWallet) || isNaN(refundAmount)) {
+                    throw new Error(`Invalid wallet (${user.wallet}) or refund amount (${order.total})`);
+                }
+                
+                // Update user wallet balance
+                user.wallet = currentWallet + refundAmount;
+                const savedUser = await user.save();
+                
+                if (!savedUser) {
+                    throw new Error('Failed to save user after wallet update');
+                }
+                
+                console.log(`Updated user wallet. Previous: ${currentWallet}, Added: ${refundAmount}, New: ${savedUser.wallet}`);
+                
+                // Create wallet transaction record
+                const walletTransaction = await WalletTransaction.create({
+                    user: userId,
+                    amount: refundAmount,
+                    type: 'credit',
+                    description: `Refund for cancelled order #${order.orderNumber}`,
+                    orderId: order._id,
+                    date: new Date()
+                });
+                
+                if (!walletTransaction) {
+                    throw new Error('Failed to create wallet transaction');
+                }
+                
+                console.log(`Created wallet transaction: ${walletTransaction._id}`);
+                
+                // Send notification about the wallet transaction
+                await sendWalletNotification(
+                    userId,
+                    'credit',
+                    refundAmount,
+                    `Refund for cancelled order #${order.orderNumber}`
+                );
+                
+                console.log(`Refunded ${refundAmount} to user wallet for cancelled order ${order._id}`);
+                
+                // Update order payment status
+                order.paymentStatus = 'Refunded';
+                // Save order immediately after updating payment status
+                await order.save();
+                console.log(`Updated order payment status to Refunded and saved order ${order._id}`);
+            } catch (error) {
+                console.error(`Error processing refund for order ${order._id}:`, error);
+                // Continue with order cancellation even if refund fails
+                // Still update payment status even if refund fails
+                order.paymentStatus = 'Refunded';
+                await order.save();
+                console.log(`Updated order payment status to Refunded despite refund error for order ${order._id}`);
+            }
         }
         
         await order.save();
         
         return res.status(200).json({ 
             success: true, 
-            message: 'Order cancelled successfully' 
+            message: 'Order cancelled successfully. Amount refunded to wallet.' 
         });
     } catch (error) {
         console.error('Error cancelling order:', error);
@@ -204,8 +271,10 @@ const returnOrder = async (req, res) => {
         order.orderStatus = 'Returned';
         order.returnedAt = new Date();
         order.returnReason = returnReason;
+        // Set returnStatus to 'For Verification' so it appears in admin panel
+        order.returnStatus = 'For Verification';
         
-       
+        // Update item status
         order.items.forEach(item => {
             item.status = 'Returned';
             item.returnedAt = new Date();

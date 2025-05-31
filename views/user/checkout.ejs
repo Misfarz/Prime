@@ -87,10 +87,13 @@
             </div>
             <!-- Wallet -->
             <div class="flex items-center space-x-3">
-                <input type="radio" name="paymentMethod" id="wallet" value="wallet" class="w-4 h-4 text-blue-600">
-                <label for="wallet" class="flex items-center space-x-3 cursor-pointer">
-                    <i class="fas fa-wallet text-blue-600"></i>
-                    <span>Wallet</span>
+                <input type="radio" name="paymentMethod" id="wallet" value="wallet" class="w-4 h-4 text-blue-600" <% if (user.wallet < summary.total) { %>disabled<% } %>>
+                <label for="wallet" class="flex items-center space-x-3 <% if (user.wallet < summary.total) { %>text-gray-400 cursor-not-allowed<% } else { %>cursor-pointer<% } %>">
+                    <i class="fas fa-wallet <% if (user.wallet < summary.total) { %>text-gray-400<% } else { %>text-blue-600<% } %>"></i>
+                    <span>Wallet (₹<%= user.wallet.toFixed(2) %>)</span>
+                    <% if (user.wallet < summary.total) { %>
+                        <span class="text-xs text-red-500 ml-2">(Insufficient balance)</span>
+                    <% } %>
                 </label>
             </div>
 
@@ -166,6 +169,7 @@
                                 <div class="flex items-center space-x-4">
                                     <div class="flex items-center space-x-2">
                                         <span class="px-2 py-1 bg-gray-100 rounded quantity"><%= item.quantity %></span>
+                
                                     </div>
                                     <span class="font-medium">
                                         <% 
@@ -183,6 +187,11 @@
                                         %>
                                         ₹<%= (itemPrice * item.quantity).toFixed(2) %>
                                     </span>
+                                    <button class="text-red-500 hover:text-red-700 delete-item-btn" 
+                                            data-item-id="<%= item._id %>" 
+                                            title="Remove item">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         <% }); %>
@@ -305,7 +314,100 @@
 
 
     <script>
+    // Initialize payment tracking variable
+    window.paymentCompleted = false;
+    
+    // Function to show toast message
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} shadow-lg z-50`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
+    // Function to update cart summary
+    function updateCartSummary(data) {
+        const subtotal = document.getElementById('subtotal');
+        const tax = document.getElementById('tax');
+        const total = document.getElementById('total');
+        const itemCount = document.getElementById('item-count');
+        
+        if (subtotal) subtotal.textContent = `₹${data.subtotal.toFixed(2)}`;
+        if (tax) tax.textContent = `₹${data.tax.toFixed(2)}`;
+        if (total) total.textContent = `₹${data.total.toFixed(2)}`;
+        if (itemCount) itemCount.textContent = data.items;
+        
+        // Update cart count in header if exists
+        const headerCartCount = document.querySelector('.cart-count');
+        if (headerCartCount) {
+            headerCartCount.textContent = data.items;
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
+        // Handle delete item from cart
+        document.addEventListener('click', async function(e) {
+            if (e.target.closest('.delete-item-btn')) {
+                e.preventDefault();
+                const deleteBtn = e.target.closest('.delete-item-btn');
+                const itemId = deleteBtn.getAttribute('data-item-id');
+                const cartItem = deleteBtn.closest('.cart-item');
+                
+                if (!confirm('Are you sure you want to remove this item from your cart?')) {
+                    return;
+                }
+                
+                try {
+                    // Show loading state
+                    deleteBtn.disabled = true;
+                    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    
+                    // Make API call to remove item from cart
+                    const response = await fetch(`/cart/remove/${itemId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'same-origin' // Include cookies for session
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Remove the item from the UI
+                        cartItem.remove();
+                        
+                        // Update the cart summary
+                        updateCartSummary({
+                            subtotal: result.cartTotal || 0,
+                            tax: Math.round((result.cartTotal || 0) * 0.05),
+                            total: (result.cartTotal || 0) + Math.round((result.cartTotal || 0) * 0.05) + 50, // Adding tax and shipping
+                            items: document.querySelectorAll('.cart-item').length - 1 // Update item count
+                        });
+                        
+                        // Show success message
+                        showToast('Item removed from cart', 'success');
+                        
+                        // If cart is empty, redirect to cart page
+                        if (result.cartCount === 0) {
+                            window.location.href = '/cart';
+                        }
+                    } else {
+                        throw new Error(result.message || 'Failed to remove item');
+                    }
+                } catch (error) {
+                    console.error('Error removing item from cart:', error);
+                    showToast(error.message || 'Failed to remove item', 'error');
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                }
+            }
+        });
         
         const addressModal = document.getElementById('addressModal');
         const addressForm = document.getElementById('address-form');
@@ -318,6 +420,7 @@
         const selectedAddressIdInput = document.getElementById('selected-address-id');
         const selectedPaymentInput = document.getElementById('selected-payment-method')
         const placeOrderBtn = document.getElementById('place-order-btn');
+       
         
       
         if (addAddressBtn) {
@@ -378,6 +481,8 @@
                 this.classList.add('hidden');
             }
         });
+
+
          
        
         document.querySelectorAll('.edit-address-btn').forEach(button => {
@@ -438,6 +543,40 @@
                 selectedAddressIdInput.value = radio.value;
             }
         });
+
+         const checkdltbtn = document.querySelectorAll('checkdltbtn')
+
+         checkdltbtn.forEach(btn => {
+            
+            btn.addEventListener('click', function(){
+                const itemId = this.getAttribute('data-item-cid')
+                removecheckout(itemId)
+
+            })
+         })
+
+         function removecheckout(itemId){
+            fetch(`/cart/remove/${itemId}`,{
+                 method: 'DELETE',
+                headers: {
+                 'Content-Type': 'application/json'
+                  }
+            })
+            .then( data => {
+                if(data.success){
+                   const listItem = document.querySelector(`[data-item-cid="${itemId}"]`).closest('li');
+                   if(listItem){
+                    listItem.remove()
+                    location.reload()
+                   }
+                }
+            })
+            .catch()
+
+         }
+
+         
+
         
         const paymentRadios = document.querySelectorAll('input[name="paymentMethod"]');
         const defaultPayment = document.querySelector('input[name="paymentMethod"]:checked')
@@ -481,7 +620,56 @@
                 
                 // If payment method is Razorpay, handle it differently
                 // Ensure consistent lowercase for payment method comparison
-                if (selectedPayment.value.toLowerCase() === 'razorpay') {
+                if (selectedPayment.value.toLowerCase() === 'wallet') {
+                    // For wallet payment, validate balance
+                    const walletBalance = parseFloat('<%= user.wallet || 0 %>');
+                    const orderTotal = parseFloat('<%= summary.total || 0 %>');
+                    
+                    if (walletBalance < orderTotal) {
+                        alert('Insufficient wallet balance. Please choose another payment method.');
+                        placeOrderBtn.disabled = false;
+                        placeOrderBtn.textContent = 'Place Order';
+                        return;
+                    }
+                    
+                    // Proceed with wallet payment
+                    const formData = {
+                        addressId: selectedAddress.value,
+                        paymentMethod: selectedPayment.value
+                    };
+                    
+                    // Disable the button and show loading
+                    placeOrderBtn.disabled = true;
+                    placeOrderBtn.textContent = 'Processing...';
+                    document.getElementById('loading-overlay').classList.remove('hidden');
+                    
+                    // Submit the order
+                    fetch('/checkout/place-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.redirectUrl || '/orders';
+                        } else {
+                            alert(data.message || 'Failed to place order. Please try again.');
+                            placeOrderBtn.disabled = false;
+                            placeOrderBtn.textContent = 'Place Order';
+                            document.getElementById('loading-overlay').classList.add('hidden');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error placing order:', error);
+                        alert('An error occurred while placing your order. Please try again.');
+                        placeOrderBtn.disabled = false;
+                        placeOrderBtn.textContent = 'Place Order';
+                        document.getElementById('loading-overlay').classList.add('hidden');
+                    });
+                } else if (selectedPayment.value.toLowerCase() === 'razorpay') {
                     // First, disable the button and show loading
                     placeOrderBtn.disabled = true;
                     placeOrderBtn.textContent = 'Processing...';
@@ -587,6 +775,9 @@
                                     signatureInput2.value = response.razorpay_signature;
                                     finalForm.appendChild(signatureInput2);
                                     
+                                    // Mark payment as completed
+                                    window.paymentCompleted = true;
+                                    
                                     // Add the form to the body and submit it directly
                                     document.body.appendChild(finalForm);
                                     finalForm.submit();
@@ -608,6 +799,34 @@
                                 document.getElementById('loading-overlay').classList.add('hidden');
                             });
                             
+                            // Handle payment failures
+                            razorpayInstance.on('payment.failed', function(response) {
+                                console.error('Payment failed:', response.error);
+                                
+                                // Redirect to payment error page with details
+                                const errorCode = response.error.code || '';
+                                const errorDescription = response.error.description || 'Payment failed. Please try again.';
+                                const orderId = response.error.metadata ? response.error.metadata.order_id : '';
+                                
+                                // Construct the error URL with query parameters
+                                const errorUrl = `/payment-error?error=${encodeURIComponent(errorDescription)}&code=${encodeURIComponent(errorCode)}&order_id=${encodeURIComponent(orderId)}`;
+                                
+                                // Hide loading overlay
+                                document.getElementById('loading-overlay').classList.add('hidden');
+                                
+                                // Redirect to the error page
+                                window.location.href = errorUrl;
+                            });
+                            
+                            // Handle modal close
+                            razorpayInstance.on('modal.closed', function() {
+                                // Only reset if payment wasn't completed
+                                if (!window.paymentCompleted) {
+                                    placeOrderBtn.disabled = false;
+                                    placeOrderBtn.textContent = 'Place Order';
+                                    document.getElementById('loading-overlay').classList.add('hidden');
+                                }
+                            });
                         } else {
                             alert(data.message || 'Failed to initialize payment. Please try again.');
                             placeOrderBtn.disabled = false;

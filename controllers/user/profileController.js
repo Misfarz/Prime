@@ -4,6 +4,7 @@ const User = require("../../models/userSchema");
 const Address = require('../../models/addressSchema');
 const { Product } = require('../../models/productSchema');
 const Order = require('../../models/orderSchema');
+const WalletTransaction = require('../../models/walletTransactionSchema');
 
 
 const loadProfile = async (req, res) => {
@@ -13,7 +14,13 @@ const loadProfile = async (req, res) => {
             return res.redirect('/login');
         }
 
+        // Always fetch the latest user data from the database to ensure wallet balance is up-to-date
         const userData = await User.findById(user._id).populate('addresses');
+        
+        // Update the session user data with the latest wallet balance
+        if (userData) {
+            req.session.user.wallet = userData.wallet;
+        }
         const addresses = userData.addresses || [];
         
        
@@ -21,9 +28,12 @@ const loadProfile = async (req, res) => {
         
        
         let orders = [];
+        let walletTransactions = [];
+        let currentPage, totalPages, searchQuery;
+        
         if (activeTab === 'orders') {
            
-            const searchQuery = req.query.search || '';
+            searchQuery = req.query.search || '';
             
            
             let filter = { user: user._id };
@@ -36,9 +46,9 @@ const loadProfile = async (req, res) => {
                 ];
             }
 
-            const page = parseInt(req.query.page) || 1;
+            currentPage = parseInt(req.query.page) || 1;
             const limit = 5; 
-            const skip = (page - 1) * limit;
+            const skip = (currentPage - 1) * limit;
             
             orders = await Order.find(filter)
                 .sort({ createdAt: -1 })
@@ -46,16 +56,39 @@ const loadProfile = async (req, res) => {
                 .limit(limit);
                 
             const totalOrders = await Order.countDocuments(filter);
-            const totalPages = Math.ceil(totalOrders / limit);
+            totalPages = Math.ceil(totalOrders / limit);
             
             return res.render('profile', {
                 user: userData,
                 addresses,
                 activeTab,
                 orders,
-                currentPage: page,
+                currentPage,
                 totalPages,
                 searchQuery
+            });
+        } else if (activeTab === 'wallet') {
+            // Handle wallet tab
+            currentPage = parseInt(req.query.page) || 1;
+            const limit = 10;
+            const skip = (currentPage - 1) * limit;
+            
+            walletTransactions = await WalletTransaction.find({ user: user._id })
+                .sort({ date: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate('orderId', 'orderNumber');
+            
+            const totalTransactions = await WalletTransaction.countDocuments({ user: user._id });
+            totalPages = Math.ceil(totalTransactions / limit);
+            
+            return res.render('profile', {
+                user: userData,
+                addresses,
+                activeTab,
+                walletTransactions,
+                currentPage,
+                totalPages
             });
         }
 

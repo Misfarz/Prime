@@ -1,6 +1,8 @@
 const Order = require('../../models/orderSchema');
 const User = require('../../models/userSchema');
 const { Product } = require('../../models/productSchema');
+const WalletTransaction = require('../../models/walletTransactionSchema');
+const { sendWalletNotification } = require('../../utils/walletNotifier');
 
 const loadOrders = async (req, res) => {
     try {
@@ -12,10 +14,9 @@ const loadOrders = async (req, res) => {
         const sortField = req.query.sortField || 'createdAt';
         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
         const statusFilter = req.query.status || '';
-        
+        const returnFilter = req.query.returnFilter || '';
         
         let filter = {};
-        
         
         if (searchQuery) {
             filter.$or = [
@@ -23,9 +24,14 @@ const loadOrders = async (req, res) => {
             ];
         }
         
-       
         if (statusFilter) {
             filter.orderStatus = statusFilter;
+        }
+        
+        // Add filter for return verification requests
+        if (returnFilter === 'pending') {
+            filter.orderStatus = 'Returned';
+            filter.returnStatus = 'For Verification';
         }
         
        
@@ -56,6 +62,7 @@ const loadOrders = async (req, res) => {
             sortField,
             sortOrder: sortOrder === 1 ? 'asc' : 'desc',
             statusFilter,
+            returnFilter,
             statuses,
             activeTab: 'orders'
         });
@@ -103,7 +110,7 @@ const updateOrderStatus = async (req, res) => {
         const { orderId, status } = req.body;
         
    
-        const validStatuses = ['Placed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
+        const validStatuses = ['Placed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Refunded'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ 
                 success: false, 
@@ -134,6 +141,48 @@ const updateOrderStatus = async (req, res) => {
             order.cancelledAt = new Date();
         }
         
+        // Handle refund to wallet if status is changed to 'Refunded'
+        if (status === 'Refunded' && order.paymentStatus !== 'Refunded') {
+            try {
+                // Update payment status to Refunded
+                order.paymentStatus = 'Refunded';
+                
+                // Find the user
+                const user = await User.findById(order.user);
+                if (!user) {
+                    throw new Error('User not found');
+                }
+                
+                // Add refund amount to user's wallet
+                user.wallet += order.total;
+                await user.save();
+                
+                // Create wallet transaction record
+                const walletTransaction = await WalletTransaction.create({
+                    user: order.user,
+                    amount: order.total,
+                    type: 'credit',
+                    description: `Refund for order #${order.orderNumber}`,
+                    orderId: order._id,
+                    date: new Date()
+                });
+                
+                // Send notification about the wallet transaction
+                await sendWalletNotification(
+                    order.user,
+                    'credit',
+                    order.total,
+                    `Refund for order #${order.orderNumber}`
+                );
+                
+                console.log(`Refunded ${order.total} to user wallet for order ${order._id}`);
+            } catch (refundError) {
+                console.error('Error processing refund:', refundError);
+                // We still save the order status but log the refund error
+            }
+        }
+        
+        // Save the order with all updates
         await order.save();
         
         res.json({ 
@@ -221,19 +270,85 @@ const verifyReturnRequest = async (req, res) => {
                 }
             }
             
-        
-            order.paymentStatus = 'Refunded';
+            // Add the refunded amount to the user's wallet
+            if (order.paymentStatus === 'Paid' || order.paymentMethod === 'wallet' || order.paymentMethod==='razorpay' || order.paymentMethod==='cod') {
+                try {
+                    console.log(`Processing refund for order ${order._id}. Current wallet: ${user.wallet}, Order total: ${order.total}`);
+                    
+                    // Ensure wallet is treated as a number and handle null/undefined cases
+                    const currentWallet = Number(user.wallet || 0);
+                    const refundAmount = Number(order.total);
+                    
+                    if (isNaN(currentWallet) || isNaN(refundAmount)) {
+                        throw new Error(`Invalid wallet (${user.wallet}) or refund amount (${order.total})`);
+                    }
+                    
+                    // Update user wallet balance
+                    user.wallet = currentWallet + refundAmount;
+                    const savedUser = await user.save();
+                    
+                    if (!savedUser) {
+                        throw new Error('Failed to save user after wallet update');
+                    }
+                    
+                    console.log(`Updated user wallet. Previous: ${currentWallet}, Added: ${refundAmount}, New: ${savedUser.wallet}`);
+                    
+                    // Create wallet transaction record
+                    const walletTransaction = await WalletTransaction.create({
+                        user: order.user,
+                        amount: refundAmount,
+                        type: 'credit',
+                        description: `Refund for returned order #${order.orderNumber}`,
+                        orderId: order._id,
+                        date: new Date()
+                    });
+                    
+                    if (!walletTransaction) {
+                        throw new Error('Failed to create wallet transaction');
+                    }
+                    
+                    console.log(`Created wallet transaction: ${walletTransaction._id}`);
+                    
+                    // Send notification about the wallet transaction
+                    await sendWalletNotification(
+                        order.user,
+                        'credit',
+                        refundAmount,
+                        `Refund for returned order #${order.orderNumber}`
+                    );
+                    
+                    console.log(`Refunded ${refundAmount} to user wallet for returned order ${order._id}`);
+                    
+                    // Update order payment status
+                    order.paymentStatus = 'Refunded';
+                    // Save order immediately after updating payment status
+                    await order.save();
+                    console.log(`Updated order payment status to Refunded and saved order ${order._id}`);
+                } catch (error) {
+                    console.error(`Error processing refund for returned order ${order._id}:`, error);
+                    // Continue with return approval even if refund fails
+                }
+            } else {
+                // Set payment status to Refunded even if no wallet refund was needed
+                order.paymentStatus = 'Refunded';
+                // Save order immediately after updating payment status
+                await order.save();
+                console.log(`Updated order payment status to Refunded and saved order ${order._id}`);
+            }
+            // Update the return status to 'Approved' so it doesn't show as 'For Verification' anymore
+            order.returnStatus = 'Approved';
             await order.save();
             
             res.json({ 
                 success: true, 
-                message: 'Return approved, amount refunded, and product stock restored' 
+                message: 'Return approved, amount refunded to wallet, and product stock restored' 
             });
         } else if (action === 'reject') {
            
             order.orderStatus = 'Delivered';
-            order.returnedAt = null;
-            order.returnReason = null;
+            // Update the return status to 'Rejected' so it doesn't show as 'For Verification' anymore
+            order.returnStatus = 'Rejected';
+            // Keep the return reason and date for record purposes
             await order.save();
             
             res.json({ 

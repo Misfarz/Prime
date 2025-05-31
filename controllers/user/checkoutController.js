@@ -4,6 +4,8 @@ const User = require('../../models/userSchema');
 const Address = require('../../models/addressSchema');
 const Order = require('../../models/orderSchema');
 const Coupon = require('../../models/couponSchema');
+const WalletTransaction = require('../../models/walletTransactionSchema');
+const { sendWalletNotification } = require('../../utils/walletNotifier');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
@@ -155,7 +157,8 @@ const loadCheckout = async (req, res, next) => {
                 tax,
                 couponDiscount,
                 couponCode,
-                total
+                total,
+                walletBalance: user.wallet || 0
             },
             availableCoupons
         });
@@ -326,6 +329,7 @@ const placeOrder = async (req, res) => {
         
         // If we have Razorpay payment details, verify the payment
         if (paymentMethodLower === 'razorpay' && razorpayPaymentId && razorpayOrderId && razorpaySignature) {
+            console.log(razorpaySignature)
             // Verify the payment signature
             const generated_signature = crypto
                 .createHmac('sha256', process.env.Razorpay_key_secret)
@@ -431,6 +435,34 @@ const placeOrder = async (req, res) => {
         const total = subtotal + shipping + tax - couponDiscount;
 
         // Create the new order
+        // Handle wallet payment
+        let walletTransaction;
+        if (paymentMethodLower === 'wallet') {
+            // Check if user has sufficient balance
+            if (user.wallet < total) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Insufficient wallet balance'
+                });
+            }
+            
+            // Deduct the amount from wallet
+            user.wallet -= total;
+            await user.save();
+            
+            // Create a temporary transaction record - we'll update it with the order ID later
+            walletTransaction = new WalletTransaction({
+                user: userId,
+                amount: total,
+                type: 'debit',
+                description: 'Payment for order',
+                date: new Date()
+            });
+            
+            // We'll save this after creating the order to include the order ID
+            console.log('Created wallet transaction for payment:', walletTransaction);
+        }
+        
         const newOrder = new Order({
             user: userId,
             items: orderItems,
@@ -457,10 +489,32 @@ const placeOrder = async (req, res) => {
 
         const savedOrder = await newOrder.save();
 
+        // If this was a wallet payment, update the transaction with the order ID and save it
+        if (paymentMethodLower === 'wallet' && walletTransaction) {
+            try {
+                walletTransaction.orderId = savedOrder._id;
+                walletTransaction.description = `Payment for order #${savedOrder.orderNumber}`;
+                const savedTransaction = await walletTransaction.save();
+                console.log('Saved wallet transaction:', savedTransaction);
+                
+                // Send notification about the wallet payment
+                await sendWalletNotification(
+                    userId,
+                    'debit',
+                    total,
+                    `Payment for order #${savedOrder.orderNumber}`
+                );
+            } catch (error) {
+                console.error('Error saving wallet transaction:', error);
+                // Continue with order processing even if wallet transaction saving fails
+            }
+        }
         
+        // Update user's order history
         user.orderHistory.push(savedOrder._id);
         await user.save();
-
+        
+        // Clear the user's cart
         await Cart.findOneAndUpdate(
             { user: userId },
             { $set: { items: [], totalAmount: 0, coupon: undefined } }
@@ -518,7 +572,7 @@ const placeOrder = async (req, res) => {
                                !req.headers['x-requested-with'];
         
         // For Razorpay payments with form submission, redirect directly
-        if (expectsRedirect && paymentMethodLower === 'razorpay' && razorpayPaymentId) {
+        if (expectsRedirect && ((paymentMethodLower === 'razorpay' && razorpayPaymentId) || paymentMethodLower === 'cod' || paymentMethodLower === 'wallet')) {
             return res.redirect(`/order-success/${savedOrder._id}`);
         }
         
@@ -581,10 +635,32 @@ const orderSuccess = async (req, res) => {
     }
 };
 
+const paymentError = async (req, res) => {
+    try {
+        // Get error details from query parameters
+        const { error, code, order_id } = req.query;
+        
+        // Default error message if none provided
+        const errorMessage = error || "Your payment could not be processed. Please try again.";
+        
+        res.render('payment-error', {
+            user: req.session.user,
+            errorMessage: errorMessage,
+            errorCode: code || null,
+            orderId: order_id || null
+        });
+    } catch (error) {
+        console.error('Error rendering payment error page:', error);
+        res.status(500).render('error', { 
+            error: 'An unexpected error occurred',
+            user: req.session.user
+        });
+    }
+};
+
 module.exports = {
     loadCheckout,
     placeOrder,
-    orderSuccess
+    orderSuccess,
+    paymentError
 };
-
-

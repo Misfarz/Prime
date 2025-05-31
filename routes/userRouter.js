@@ -116,6 +116,7 @@ router.post('/cart/validate-checkout', userAuth, cartController.validateCartForC
 router.get('/checkout', userAuth, checkoutController.loadCheckout);
 router.post('/checkout/place-order', userAuth, checkoutController.placeOrder);
 router.get('/order-success/:orderId', userAuth, checkoutController.orderSuccess);
+router.get('/payment-error', userAuth, checkoutController.paymentError);
 
 // Coupon routes
 router.post('/coupons/apply', userAuth, couponController.applyCoupon);

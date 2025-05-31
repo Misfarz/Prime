@@ -290,11 +290,8 @@
             <button id="addToCartBtn" class="flex-1 bg-black hover:bg-gray-900 text-white px-6 py-3 font-medium flex items-center justify-center transition-colors">
               <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
             </button>
-            <button id="buyNowBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-3 font-medium flex items-center justify-center transition-colors">
-              <i class="fas fa-bolt mr-2"></i> Buy Now
-            </button>
-            <button id="wishlistBtn" class="flex-none bg-white border border-gray-300 hover:bg-gray-100 text-gray-900 px-4 py-3 font-medium flex items-center justify-center transition-colors" data-product-id="<%= product._id %>">
-              <i class="<%= user && user.whishlist && user.whishlist.includes(product._id.toString()) ? 'fas' : 'far' %> fa-heart mr-2 wishlist-icon"></i>
+            <button id="wishlistBtn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-3 font-medium flex items-center justify-center transition-colors" data-product-id="<%= product._id %>">
+              <i class="<%= user && user.whishlist && user.whishlist.includes(product._id.toString()) ? 'fas' : 'far' %> fa-heart mr-2 wishlist-icon"></i>Add to whishlist
             </button>
           </div>
           

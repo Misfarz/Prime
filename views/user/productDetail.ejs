@@ -99,14 +99,10 @@
     
    
     .zoom-container:hover .zoom-image {
-      transform: scale(1.5);
+      transform: scale(1.1);
     }
     
-    
-    .zoom-container.active .zoom-image {
-      transition: transform 0.1s ease-out;
-    }
-    
+    /* Toast Notification Styles */
     /* Toast notification styles */
     .toast-notification {
       position: fixed;
@@ -502,7 +498,7 @@
       const isInWishlist = wishlistIcon.classList.contains('fas');
       
       if (isInWishlist) {
-        
+      
         fetch(`/wishlist/remove/${productId}`, {
           method: 'DELETE',
           headers: {
@@ -514,16 +510,17 @@
           if (data.success) {
             wishlistIcon.classList.remove('fas', 'text-red-500');
             wishlistIcon.classList.add('far');
+            showToast('success', 'Removed from wishlist');
           } else {
-            alert(data.message || 'Failed to remove from wishlist');
+            showToast('error', data.message || 'Failed to remove from wishlist');
           }
         })
         .catch(error => {
           console.error('Error removing from wishlist:', error);
-          alert('An error occurred. Please try again.');
+          showToast('error', 'An error occurred. Please try again.');
         });
       } else {
-       
+   
         fetch(`/wishlist/add/${productId}`, {
           method: 'POST',
           headers: {
@@ -535,13 +532,14 @@
           if (data.success) {
             wishlistIcon.classList.remove('far');
             wishlistIcon.classList.add('fas', 'text-red-500');
+            showToast('success', 'Added to wishlist');
           } else {
-            alert(data.message || 'Failed to add to wishlist');
+            showToast('error', data.message || 'Failed to add to wishlist');
           }
         })
         .catch(error => {
           console.error('Error adding to wishlist:', error);
-          alert('An error occurred. Please try again.');
+          showToast('error', 'An error occurred. Please try again.');
         });
       }
     }
@@ -553,6 +551,12 @@
       if (currentValue > 1) {
         quantityInput.value = currentValue - 1;
       }
+    });
+    
+    
+    document.getElementById('wishlistBtn').addEventListener('click', function() {
+      const productId = this.getAttribute('data-product-id');
+      toggleWishlist(this, productId);
     });
     
     document.getElementById('increaseQuantity').addEventListener('click', function() {
@@ -672,7 +676,7 @@
       alert(`Proceeding to checkout with ${quantity} item(s) of size ${selectedSize.value}`);
     });
     
-    // Wishlist functionality
+  
     document.getElementById('wishlistBtn').addEventListener('click', function() {
       const productId = this.getAttribute('data-product-id');
       const wishlistIcon = this.querySelector('.wishlist-icon');
@@ -701,7 +705,7 @@
           alert('An error occurred. Please try again.');
         });
       } else {
-        // Add to wishlist
+   
         fetch(`/wishlist/add/${productId}`, {
           method: 'POST',
           headers: {

@@ -4,20 +4,34 @@ exports.getCategories = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
+    const search = req.query.search || '';
 
     try {
-        const total = await Category.countDocuments();
-        const categories = await Category.find().skip(skip).limit(limit);
+       
+        const searchFilter = search ? {
+            $or: [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { subcategories: { $elemMatch: { $regex: search, $options: 'i' } } }
+            ]
+        } : {};
+
+      
+        const total = await Category.countDocuments(searchFilter);
+        
+        
+        const categories = await Category.find(searchFilter).skip(skip).limit(limit);
         const totalPages = Math.ceil(total / limit);
 
         res.render('category', {
             categories,
             currentPage: page,
-            totalPages
+            totalPages,
+            search 
         });
     } catch (error) {
         res.status(500).send('Server Error');
-        console.error("get categories error",error)
+        console.error("get categories error", error);
     }
 };
 

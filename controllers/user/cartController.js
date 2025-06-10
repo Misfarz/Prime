@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Cart = require('../../models/cartSchema');
 const User = require('../../models/userSchema');
-const { Product } = require('../../models/productSchema');
+const Product = require('../../models/productSchema');
 const { Category } = require('../../models/categorySchema');
 
 const MAX_QUANTITY_PER_PRODUCT = 20;

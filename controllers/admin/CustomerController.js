@@ -13,8 +13,8 @@ const customerInfo = async (req, res) => {
         const userData = await User.find({
             isAdmin: false,
             $or: [
-                { firstname: { $regex: "." + Search + ".", $options: "i" } },
-                { email: { $regex: "." + Search + ".", $options: "i" } }
+                { firstname: { $regex: Search, $options: "i" } },
+                { email: { $regex: Search, $options: "i" } }
             ]
         })
             .limit(limit)
@@ -24,15 +24,16 @@ const customerInfo = async (req, res) => {
         const count = await User.countDocuments({
             isAdmin: false,
             $or: [
-                { firstname: { $regex: "." + Search + ".", $options: "i" } },
-                { email: { $regex: "." + Search + ".", $options: "i" } }
+                { firstname: { $regex: Search, $options: "i" } },
+                { email: { $regex: Search, $options: "i" } }
             ]
         });
 
         res.render("customers", {
             data: userData,
             totalPages: Math.ceil(count / limit),
-            currentPage: page
+            currentPage: page,
+            search: Search
         });
 
     } catch (error) {

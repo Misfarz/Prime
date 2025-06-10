@@ -1,15 +1,18 @@
 const Order = require('../../models/orderSchema');
+const Product = require('../../models/productSchema'); 
+const Category = require('../../models/categorySchema'); 
+const User = require('../../models/userSchema'); 
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit-table');
 const fs = require('fs');
 const path = require('path');
 
-// Helper function to format date for query
+
 const formatDate = (date) => {
     return new Date(date).toISOString().split('T')[0];
 };
 
-// Helper function to get date range based on filter type
+
 const getDateRange = (filterType, customStartDate, customEndDate) => {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -19,26 +22,26 @@ const getDateRange = (filterType, customStartDate, customEndDate) => {
     
     switch (filterType) {
         case 'daily':
-            // Today
+     
             startDate.setHours(0, 0, 0, 0);
             break;
         case 'weekly':
-            // Last 7 days
+     
             startDate.setDate(today.getDate() - 7);
             startDate.setHours(0, 0, 0, 0);
             break;
         case 'monthly':
-            // Last 30 days
+         
             startDate.setDate(today.getDate() - 30);
             startDate.setHours(0, 0, 0, 0);
             break;
         case 'yearly':
-            // Last 365 days
+        
             startDate.setDate(today.getDate() - 365);
             startDate.setHours(0, 0, 0, 0);
             break;
         case 'custom':
-            // Custom date range
+          
             if (customStartDate && customEndDate) {
                 startDate = new Date(customStartDate);
                 startDate.setHours(0, 0, 0, 0);
@@ -47,14 +50,14 @@ const getDateRange = (filterType, customStartDate, customEndDate) => {
             }
             break;
         default:
-            // Default to today
+          
             startDate.setHours(0, 0, 0, 0);
     }
     
     return { startDate, endDate };
 };
 
-// Load sales report page
+
 const loadSalesReport = async (req, res) => {
     try {
         const filterType = req.query.filterType || 'daily';
@@ -63,13 +66,13 @@ const loadSalesReport = async (req, res) => {
         
         const { startDate, endDate } = getDateRange(filterType, customStartDate, customEndDate);
         
-        // Query orders within the date range and with status "Delivered"
+       
         const orders = await Order.find({
             createdAt: { $gte: startDate, $lte: endDate },
             orderStatus: { $in: ['Delivered'] }
         }).populate('user', 'name email');
         
-        // Calculate summary statistics
+    
         let totalSales = 0;
         let totalDiscount = 0;
         let totalOrders = orders.length;
@@ -103,7 +106,7 @@ const loadSalesReport = async (req, res) => {
     }
 };
 
-// Generate and download sales report as Excel
+
 const downloadExcelReport = async (req, res) => {
     try {
         const filterType = req.query.filterType || 'daily';
@@ -112,29 +115,29 @@ const downloadExcelReport = async (req, res) => {
         
         const { startDate, endDate } = getDateRange(filterType, customStartDate, customEndDate);
         
-        // Query orders within the date range and with status "Delivered"
+     
         const orders = await Order.find({
             createdAt: { $gte: startDate, $lte: endDate },
             orderStatus: { $in: ['Delivered'] }
         }).populate('user', 'name email');
         
-        // Create a new Excel workbook and worksheet
+      
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Sales Report');
         
-        // Add title
+   
         worksheet.mergeCells('A1:H1');
         worksheet.getCell('A1').value = 'Prime Sales Report';
         worksheet.getCell('A1').font = { size: 16, bold: true };
         worksheet.getCell('A1').alignment = { horizontal: 'center' };
         
-        // Add date range
+  
         worksheet.mergeCells('A2:H2');
         worksheet.getCell('A2').value = `Period: ${formatDate(startDate)} to ${formatDate(endDate)}`;
         worksheet.getCell('A2').font = { size: 12 };
         worksheet.getCell('A2').alignment = { horizontal: 'center' };
         
-        // Add summary
+   
         let totalSales = 0;
         let totalDiscount = 0;
         orders.forEach(order => {
@@ -147,14 +150,14 @@ const downloadExcelReport = async (req, res) => {
         worksheet.getCell('A3').font = { size: 12, bold: true };
         worksheet.getCell('A3').alignment = { horizontal: 'center' };
         
-        // Add headers
+
         worksheet.addRow(['Order ID', 'Customer', 'Date', 'Payment Method', 'Status', 'Subtotal', 'Discount', 'Total']);
         
-        // Style the header row
+    
         worksheet.getRow(4).font = { bold: true };
         worksheet.getRow(4).alignment = { horizontal: 'center' };
         
-        // Add order data
+
         orders.forEach(order => {
             worksheet.addRow([
                 order.orderNumber,
@@ -168,37 +171,36 @@ const downloadExcelReport = async (req, res) => {
             ]);
         });
         
-        // Style the data
+     
         for (let i = 5; i < 5 + orders.length; i++) {
             worksheet.getRow(i).alignment = { horizontal: 'center' };
         }
         
-        // Set column widths
+     
         worksheet.columns.forEach(column => {
             column.width = 15;
         });
         
-        // Generate file name
+      
         const fileName = `sales_report_${formatDate(startDate)}_to_${formatDate(endDate)}.xlsx`;
         const filePath = path.join(__dirname, '../../public/downloads', fileName);
         
-        // Ensure the directory exists
+        
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
         
-        // Write the file
+  
         await workbook.xlsx.writeFile(filePath);
-        
-        // Send the file
+    
         res.download(filePath, fileName, (err) => {
             if (err) {
                 console.error('Error sending file:', err);
                 res.status(500).send('Error downloading file');
             }
             
-            // Delete the file after sending
+         
             fs.unlink(filePath, (unlinkErr) => {
                 if (unlinkErr) console.error('Error deleting file:', unlinkErr);
             });
@@ -209,7 +211,7 @@ const downloadExcelReport = async (req, res) => {
     }
 };
 
-// Generate and download sales report as PDF
+
 const downloadPdfReport = async (req, res) => {
     try {
         const filterType = req.query.filterType || 'daily';
@@ -218,13 +220,13 @@ const downloadPdfReport = async (req, res) => {
         
         const { startDate, endDate } = getDateRange(filterType, customStartDate, customEndDate);
         
-        // Query orders within the date range and with status "Delivered"
+        
         const orders = await Order.find({
             createdAt: { $gte: startDate, $lte: endDate },
             orderStatus: { $in: ['Delivered'] }
         }).populate('user', 'name email');
         
-        // Calculate summary statistics
+      
         let totalSales = 0;
         let totalDiscount = 0;
         orders.forEach(order => {
@@ -232,34 +234,32 @@ const downloadPdfReport = async (req, res) => {
             totalDiscount += order.discount || 0;
         });
         
-        // Generate file name
         const fileName = `sales_report_${formatDate(startDate)}_to_${formatDate(endDate)}.pdf`;
         const filePath = path.join(__dirname, '../../public/downloads', fileName);
         
-        // Ensure the directory exists
+     
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
         
-        // Create a PDF document
+        
         const doc = new PDFDocument({ margin: 30, size: 'A4' });
         const stream = fs.createWriteStream(filePath);
         doc.pipe(stream);
-        
-        // Add title
+ 
         doc.fontSize(18).text('Prime Sales Report', { align: 'center' });
         doc.moveDown();
         
-        // Add date range
+      
         doc.fontSize(12).text(`Period: ${formatDate(startDate)} to ${formatDate(endDate)}`, { align: 'center' });
         doc.moveDown();
         
-        // Add summary
+      
         doc.fontSize(12).text(`Total Orders: ${orders.length} | Total Sales: ₹${totalSales.toFixed(2)} | Total Discount: ₹${totalDiscount.toFixed(2)}`, { align: 'center' });
         doc.moveDown(2);
         
-        // Prepare table data
+     
         const tableData = {
             headers: ['Order ID', 'Customer', 'Date', 'Payment', 'Status', 'Subtotal', 'Discount', 'Total'],
             rows: orders.map(order => [
@@ -274,25 +274,25 @@ const downloadPdfReport = async (req, res) => {
             ])
         };
         
-        // Draw the table
+  
         await doc.table(tableData, {
             prepareHeader: () => doc.font('Helvetica-Bold').fontSize(10),
             prepareRow: () => doc.font('Helvetica').fontSize(10)
         });
         
-        // Finalize the PDF
+       
         doc.end();
         
-        // Wait for the file to be written
+      
         stream.on('finish', () => {
-            // Send the file
+          
             res.download(filePath, fileName, (err) => {
                 if (err) {
                     console.error('Error sending file:', err);
                     res.status(500).send('Error downloading file');
                 }
                 
-                // Delete the file after sending
+            
                 fs.unlink(filePath, (unlinkErr) => {
                     if (unlinkErr) console.error('Error deleting file:', unlinkErr);
                 });
@@ -304,8 +304,186 @@ const downloadPdfReport = async (req, res) => {
     }
 };
 
+const loadDashboard = async (req, res) => {
+    try {
+        if (!req.session.admin) {
+            return res.redirect('/admin/login');
+        }
+
+        const filterType = req.query.filterType || 'monthly';
+        const customStartDate = req.query.customStartDate;
+        const customEndDate = req.query.customEndDate;
+        const { startDate, endDate } = getDateRange(filterType, customStartDate, customEndDate);
+
+        // --- 1. Sales Trend Line Chart Data ---
+        let salesTrendLabels = [];
+        let salesTrendData = [];
+        let salesChartTitle = '';
+
+        const ordersForTrendChart = await Order.find({
+            createdAt: { $gte: startDate, $lte: endDate },
+            orderStatus: 'Delivered'
+        }).sort({ createdAt: 'asc' });
+
+        if (filterType === 'yearly') {
+            salesChartTitle = `Sales Trend Over the Last Year (Monthly Breakdown)`;
+            const salesByMonth = {};
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let currentMonthIter = new Date(startDate);
+            currentMonthIter.setDate(1);
+            let endMonthIter = new Date(endDate);
+            while(currentMonthIter <= endMonthIter) {
+                const monthKey = monthNames[currentMonthIter.getMonth()] + " " + currentMonthIter.getFullYear();
+                salesByMonth[monthKey] = 0;
+                currentMonthIter.setMonth(currentMonthIter.getMonth() + 1);
+            }
+            ordersForTrendChart.forEach(order => {
+                const monthKey = monthNames[order.createdAt.getMonth()] + " " + order.createdAt.getFullYear();
+                if (salesByMonth.hasOwnProperty(monthKey)) salesByMonth[monthKey] += order.total;
+            });
+            salesTrendLabels = Object.keys(salesByMonth);
+            salesTrendData = Object.values(salesByMonth);
+        } else {
+            if (filterType === 'monthly') salesChartTitle = `Sales Trend Over the Last 30 Days (Daily)`;
+            else if (filterType === 'weekly') salesChartTitle = `Sales Trend Over the Last 7 Days (Daily)`;
+            else if (filterType === 'daily') salesChartTitle = `Sales Trend Today`;
+            else if (filterType === 'custom') salesChartTitle = `Sales Trend: ${formatDate(startDate)} to ${formatDate(endDate)} (Daily)`;
+            else salesChartTitle = `Sales Trend (Daily Breakdown)`;
+
+            const salesByDay = {};
+            let currentDateIter = new Date(startDate);
+            while(currentDateIter <= endDate) {
+                salesByDay[formatDate(currentDateIter)] = 0;
+                currentDateIter.setDate(currentDateIter.getDate() + 1);
+            }
+            ordersForTrendChart.forEach(order => {
+                const dayString = formatDate(order.createdAt);
+                if (salesByDay.hasOwnProperty(dayString)) salesByDay[dayString] += order.total;
+            });
+            salesTrendLabels = Object.keys(salesByDay);
+            salesTrendData = Object.values(salesByDay);
+        }
+
+       
+        const overallStats = await Order.aggregate([
+            { $match: { createdAt: { $gte: startDate, $lte: endDate }, orderStatus: 'Delivered' } },
+            { $group: { _id: null, totalSales: { $sum: '$total' }, totalOrders: { $sum: 1 } } }
+        ]);
+        const periodStats = overallStats.length > 0 ? overallStats[0] : { totalSales: 0, totalOrders: 0 };
+
+        //average sales
+        let averageSalesValue = 0;
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime()); // Use getTime() for difference
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end day, ensure it's at least 1
+        
+        if (periodStats.totalSales > 0) {
+             averageSalesValue = periodStats.totalSales / (diffDays > 0 ? diffDays : 1);
+        }
+
+        const bestSellingProducts = await Order.aggregate([
+            { $match: { orderStatus: 'Delivered' } },
+            { $unwind: '$items' },
+            {
+                $group: {
+                    _id: '$items.product',
+                    totalQuantitySold: { $sum: '$items.quantity' }
+                }
+            },
+            { $sort: { totalQuantitySold: -1 } },
+            { $limit: 3 },
+            {
+                $lookup: {
+                    from: 'products', 
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'productDetails'
+                }
+            },
+            { $unwind: '$productDetails' }
+        ]);
+
+      
+        const bestSellingCategoryList = await Order.aggregate([
+            { $match: { orderStatus: 'Delivered' } },
+            { $unwind: '$items' },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'items.product',
+                    foreignField: '_id',
+                    as: 'productInfo'
+                }
+            },
+            { $unwind: '$productInfo' },
+            {
+                $group: {
+                    _id: '$productInfo.category',
+                    totalQuantitySold: { $sum: '$items.quantity' }
+                }
+            },
+            { $sort: { totalQuantitySold: -1 } },
+            { $limit: 3 },
+            {
+                $lookup: {
+                    from: 'categories', 
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'categoryDetails'
+                }
+            },
+            { $unwind: '$categoryDetails' }
+        ]);
+
+        const totalUsers = await User.countDocuments();
+        const totalProducts = await Product.countDocuments();
+        const totalActiveOrders = await Order.countDocuments({ orderStatus: { $nin: ['Delivered', 'Cancelled', 'Returned'] } });
+        const latestOrders = await Order.find().sort({ createdAt: -1 }).limit(5).populate('user', 'name');
+
+        res.render('dashboard', { 
+            filterType,
+            currentStartDate: formatDate(startDate),
+            currentEndDate: formatDate(endDate),
+            
+            salesTrendLabels: JSON.stringify(salesTrendLabels),
+            salesTrendData: JSON.stringify(salesTrendData),
+            salesChartTitle,
+
+            periodStats,
+            averageSalesValue,
+
+            bestSellingProducts,
+            bestSellingCategoryList,
+            totalUsers,
+            totalProducts,
+            totalActiveOrders,
+            latestOrders,
+            pageTitle: 'Admin Dashboard'
+        });
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        res.status(500).render('dashboard', { 
+            error: 'Failed to load dashboard data. Please try again later.',
+            pageTitle: 'Admin Dashboard - Error',
+            filterType: req.query.filterType || 'monthly',
+            currentStartDate: formatDate(new Date()),
+            currentEndDate: formatDate(new Date()),
+            salesTrendLabels: JSON.stringify([]),
+            salesTrendData: JSON.stringify([]),
+            salesChartTitle: 'Sales Data Unavailable',
+
+            periodStats: { totalSales: 0, totalOrders: 0 },
+            averageSalesValue: 0,
+            bestSellingProducts: [],
+            bestSellingCategoryList: [],
+            totalUsers: 0, totalProducts: 0, totalActiveOrders: 0, latestOrders: []
+        });
+    }
+};
+
+
 module.exports = {
     loadSalesReport,
     downloadExcelReport,
-    downloadPdfReport
+    downloadPdfReport,
+    loadDashboard
 };

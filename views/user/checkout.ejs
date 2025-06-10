@@ -71,10 +71,13 @@
                         <div class="flex gap-4 space-x-3">
                             <!-- Cash on Delivery -->
             <div class="flex items-center space-x-3">
-                <input type="radio" name="paymentMethod" id="cod" value="cod" class="w-4 h-4 text-blue-600" checked>
+                <input type="radio" name="paymentMethod" id="cod" value="cod" class="w-4 h-4 text-blue-600" checked  <% if (summary.total > 1000) { %>disabled<% } %>>
                 <label for="cod" class="flex items-center space-x-3 cursor-pointer">
                     <i class="fas fa-money-bill-wave text-blue-600"></i>
                     <span>Cash on Delivery</span>
+                    <% if(summary.total > 1000) {%>
+                         <p class="text-red-600 text-xs">not available</p>
+                    <% } %>
                 </label>
             </div>
             <!-- Razorpay -->
@@ -220,7 +223,7 @@
                             <div class="flex space-x-2">
                                 <input type="text" id="coupon-code" placeholder="Enter coupon code" class="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <button type="button" id="apply-coupon-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    Apply
+                                     Apply
                                 </button>
                             </div>
                             <div id="coupon-message" class="mt-2 text-sm hidden"></div>
@@ -314,23 +317,23 @@
 
 
     <script>
-    // Initialize payment tracking variable
+  
     window.paymentCompleted = false;
     
-    // Function to show toast message
+  
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `fixed top-4 right-4 px-6 py-3 rounded-md text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} shadow-lg z-50`;
         toast.textContent = message;
         document.body.appendChild(toast);
         
-        // Remove toast after 3 seconds
+        
         setTimeout(() => {
             toast.remove();
         }, 3000);
     }
     
-    // Function to update cart summary
+  
     function updateCartSummary(data) {
         const subtotal = document.getElementById('subtotal');
         const tax = document.getElementById('tax');
@@ -617,11 +620,9 @@
                 
             
                 const formData = new FormData(placeOrderForm);
-                
-                // If payment method is Razorpay, handle it differently
-                // Ensure consistent lowercase for payment method comparison
+              
                 if (selectedPayment.value.toLowerCase() === 'wallet') {
-                    // For wallet payment, validate balance
+                 
                     const walletBalance = parseFloat('<%= user.wallet || 0 %>');
                     const orderTotal = parseFloat('<%= summary.total || 0 %>');
                     
@@ -892,13 +893,13 @@
             selectedAddressIdInput.value = checkedAddress.value;
         }
         
-        // Coupon functionality
+        
         const applyCouponBtn = document.getElementById('apply-coupon-btn');
         const removeCouponBtn = document.getElementById('remove-coupon-btn');
         const couponCodeInput = document.getElementById('coupon-code');
         const couponMessage = document.getElementById('coupon-message');
         
-        // Apply coupon from input field
+      
         if (applyCouponBtn && couponCodeInput) {
             applyCouponBtn.addEventListener('click', function() {
                 const couponCode = couponCodeInput.value.trim();
@@ -911,19 +912,19 @@
             });
         }
         
-        // Apply coupon from available coupons list
+     
         const availableCouponButtons = document.querySelectorAll('.apply-available-coupon');
         if (availableCouponButtons.length > 0) {
             availableCouponButtons.forEach(button => {
                 button.addEventListener('click', function(e) {
-                    e.stopPropagation(); // Prevent the parent div click event
+                    e.stopPropagation();
                     const couponCode = this.dataset.couponCode;
                     applyCoupon(couponCode);
                 });
             });
         }
         
-        // Make the entire coupon card clickable
+  
         const availableCoupons = document.querySelectorAll('.available-coupon');
         if (availableCoupons.length > 0) {
             availableCoupons.forEach(coupon => {
@@ -934,9 +935,9 @@
             });
         }
         
-        // Function to apply a coupon
+     
         function applyCoupon(couponCode) {
-            // Disable button during API call
+           
             if (applyCouponBtn) {
                 applyCouponBtn.disabled = true;
                 applyCouponBtn.textContent = 'Applying...';
@@ -952,13 +953,13 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Update the order summary with new values
+                  
                     document.getElementById('subtotal').textContent = `₹${data.summary.subtotal.toFixed(2)}`;
                     document.getElementById('shipping').textContent = `₹${data.summary.shipping.toFixed(2)}`;
                     document.getElementById('tax').textContent = `₹${data.summary.tax.toFixed(2)}`;
                     document.getElementById('total').textContent = `₹${data.summary.total.toFixed(2)}`;
                     
-                    // Show success message and refresh page to update UI
+               
                     showCouponMessage(data.message, 'success');
                     setTimeout(() => {
                         window.location.reload();
@@ -981,10 +982,10 @@
             });
         }
         
-        // Remove coupon
+      
         if (removeCouponBtn) {
             removeCouponBtn.addEventListener('click', function() {
-                // Disable button during API call
+               
                 removeCouponBtn.disabled = true;
                 
                 fetch('/coupons/remove', {
@@ -996,13 +997,13 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Update the order summary with new values
+                       
                         document.getElementById('subtotal').textContent = `₹${data.summary.subtotal.toFixed(2)}`;
                         document.getElementById('shipping').textContent = `₹${data.summary.shipping.toFixed(2)}`;
                         document.getElementById('tax').textContent = `₹${data.summary.tax.toFixed(2)}`;
                         document.getElementById('total').textContent = `₹${data.summary.total.toFixed(2)}`;
                         
-                        // Refresh page to update UI
+                       
                         window.location.reload();
                     } else {
                         alert(data.message);
@@ -1017,7 +1018,7 @@
             });
         }
         
-        // Helper function to show coupon messages
+        
         function showCouponMessage(message, type) {
             if (!couponMessage) return;
             

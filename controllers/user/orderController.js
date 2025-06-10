@@ -1,6 +1,6 @@
 const Order = require('../../models/orderSchema');
 const User = require('../../models/userSchema');
-const { Product } = require('../../models/productSchema');
+const Product  = require('../../models/productSchema');
 const WalletTransaction = require('../../models/walletTransactionSchema');
 const { sendWalletNotification } = require('../../utils/walletNotifier');
 const PDFDocument = require('pdfkit');
@@ -243,68 +243,64 @@ const returnOrder = async (req, res) => {
         const userId = req.session.user._id;
         const orderId = req.params.orderId;
         const { returnReason } = req.body;
-        
-        
+
+        // Handle uploaded files
+        const returnImages = req.files ? req.files.map(file => file.path.replace(/\\/g, '/').replace('public/', '')) : [];
+
         if (!returnReason) {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Return reason is required' 
             });
         }
-        
-        
+
         const order = await Order.findOne({ _id: orderId, user: userId });
-        
+
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
-        
-       
+
         if (order.orderStatus !== 'Delivered') {
             return res.status(400).json({ 
                 success: false, 
                 message: `Order cannot be returned because it is ${order.orderStatus.toLowerCase()}`
             });
         }
-        
-      
+
         order.orderStatus = 'Returned';
         order.returnedAt = new Date();
         order.returnReason = returnReason;
-        // Set returnStatus to 'For Verification' so it appears in admin panel
+        order.returnImage = returnImages; // Save image paths
         order.returnStatus = 'For Verification';
-        
-        // Update item status
+
         order.items.forEach(item => {
             item.status = 'Returned';
             item.returnedAt = new Date();
             item.returnReason = returnReason;
         });
-        
-        
+
         for (const item of order.items) {
             await Product.findByIdAndUpdate(
                 item.product,
                 { $inc: { stock: item.quantity } }
             );
         }
-        
-        
+
         if (order.paymentStatus === 'Paid') {
             order.paymentStatus = 'Refunded';
         }
-        
+
         await order.save();
-        
+
         return res.status(200).json({ 
             success: true, 
-            message: 'Order returned successfully' 
+            message: 'Your return request has been submitted successfully.' 
         });
     } catch (error) {
         console.error('Error returning order:', error);
         return res.status(500).json({ 
             success: false, 
-            message: 'Failed to return order' 
+            message: 'Failed to submit return request.' 
         });
     }
 };

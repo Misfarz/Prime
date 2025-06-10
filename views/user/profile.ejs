@@ -54,6 +54,9 @@
                         <a href="/profile?tab=wallet" class="block px-3 py-2 rounded-md text-sm <%= activeTab === 'wallet' ? 'bg-grey-100 font-medium' : 'hover:bg-gray-50' %>">
                             Wallet
                         </a>
+                        <a href="/profile?tab=referrals" class="block px-3 py-2 rounded-md text-sm <%= activeTab === 'referrals' ? 'bg-grey-100 font-medium' : 'hover:bg-gray-50' %>">
+                            Referrals
+                        </a>
                         <% if (user.googleId) { %>
                         <a href="https://myaccount.google.com/" target="_blank" class="block px-3 py-2 rounded-md text-sm hover:bg-gray-50">
                             <i class="fab fa-google mr-1"></i> Manage Google Account
@@ -326,6 +329,86 @@
                                 </a>
                             </div>
                         <% } %>
+                    <% } else if (activeTab === 'referrals') { %>
+                        <!-- Referrals Tab -->
+                        <div class="mb-6">
+                            <h2 class="text-xl font-semibold mb-4">My Referrals</h2>
+                            
+                            <div class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg p-6 text-white shadow-lg mb-6">
+                                <div class="flex flex-col md:flex-row justify-between items-center">
+                                    <div>
+                                        <h3 class="text-lg font-medium mb-1">Your Referral Code</h3>
+                                        <p class="text-sm opacity-80 mb-4">Share this code with friends and earn rewards!</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="flex items-center space-x-2 mb-2">
+                                            <div id="referralCode" class="bg-white text-indigo-800 font-bold text-xl px-4 py-2 rounded">
+                                                <%= user.referalCode || 'No code available' %>
+                                            </div>
+                                            <button onclick="copyReferralCode()" class="bg-white text-indigo-800 p-2 rounded hover:bg-gray-100" title="Copy to clipboard">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div class="border rounded-lg p-5">
+                                    <h3 class="font-semibold text-lg mb-3">How It Works</h3>
+                                    <ol class="list-decimal pl-5 space-y-2">
+                                        <li>Share your unique referral code with friends</li>
+                                        <li>When they sign up using your code, they get ₹70 in their wallet</li>
+                                        <li>You receive ₹35 in your wallet as a reward</li>
+                                        <li>There's no limit to how many people you can refer!</li>
+                                    </ol>
+                                </div>
+                                
+                                <div class="border rounded-lg p-5">
+                                    <h3 class="font-semibold text-lg mb-3">Referral Stats</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500">Total Referrals</p>
+                                            <p class="text-2xl font-bold"><%= user.redeemedUsers ? user.redeemedUsers.length : 0 %></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Total Earnings</p>
+                                            <p class="text-2xl font-bold">₹<%= user.redeemedUsers ? user.redeemedUsers.length * 35 : 0 %></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6">
+                                <h3 class="font-semibold text-lg mb-3">Share Your Referral Code</h3>
+                                <div class="flex flex-wrap gap-3">
+                                    <a href="https://wa.me/?text=Use%20my%20referral%20code%20<%=user.referalCode%>%20to%20get%20₹70%20in%20your%20wallet%20when%20you%20sign%20up%20at%20Prime!" target="_blank" class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition">
+                                        <i class="fab fa-whatsapp"></i> WhatsApp
+                                    </a>
+                                    <a href="mailto:?subject=Join%20Prime%20with%20my%20referral%20code&body=Use%20my%20referral%20code%20<%=user.referalCode%>%20to%20get%20₹70%20in%20your%20wallet%20when%20you%20sign%20up%20at%20Prime!" class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">
+                                        <i class="fas fa-envelope"></i> Email
+                                    </a>
+                                    <button onclick="copyReferralMessage()" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition">
+                                        <i class="fas fa-copy"></i> Copy Message
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <script>
+                                function copyReferralCode() {
+                                    const code = document.getElementById('referralCode').innerText;
+                                    navigator.clipboard.writeText(code);
+                                    alert('Referral code copied to clipboard!');
+                                }
+                                
+                                function copyReferralMessage() {
+                                    const code = document.getElementById('referralCode').innerText;
+                                    const message = `Use my referral code ${code} to get ₹70 in your wallet when you sign up at Prime!`;
+                                    navigator.clipboard.writeText(message);
+                                    alert('Referral message copied to clipboard!');
+                                }
+                            </script>
+                        </div>
                     <% } else if (activeTab === 'wallet') { %>
                         <!-- Wallet Tab -->
                         <div class="mb-6">

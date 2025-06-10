@@ -1,4 +1,4 @@
-const {Product} = require("../../models/productSchema")
+const Product = require("../../models/productSchema")
 const Address = require('../../models/addressSchema');
 const User = require('../../models/userSchema');
 const Cart = require("../../models/cartSchema");

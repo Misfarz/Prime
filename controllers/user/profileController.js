@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const User = require("../../models/userSchema");
 const Address = require('../../models/addressSchema');
-const { Product } = require('../../models/productSchema');
+const Product  = require('../../models/productSchema');
 const Order = require('../../models/orderSchema');
 const WalletTransaction = require('../../models/walletTransactionSchema');
 
@@ -15,23 +15,34 @@ const loadProfile = async (req, res) => {
         }
 
         // Always fetch the latest user data from the database to ensure wallet balance is up-to-date
-        const userData = await User.findById(user._id).populate('addresses');
+        let userData = await User.findById(user._id).populate('addresses');
         
-        // Update the session user data with the latest wallet balance
+        // If the user doesn't have a referral code yet, generate one
+        if (!userData.referalCode) {
+            const namePrefix = userData.name.substring(0, 3).toUpperCase();
+            const randomChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+            const timestamp = Date.now().toString().slice(-4);
+            userData.referalCode = `${namePrefix}${randomChars}${timestamp}`;
+            await userData.save();
+        }
+        
+        // Update the session user data with the latest wallet balance and referral code
         if (userData) {
             req.session.user.wallet = userData.wallet;
+            req.session.user.referalCode = userData.referalCode;
         }
         const addresses = userData.addresses || [];
         
-       
         const activeTab = req.query.tab || 'details';
         
-       
         let orders = [];
         let walletTransactions = [];
         let currentPage, totalPages, searchQuery;
         
-        if (activeTab === 'orders') {
+        if (activeTab === 'referrals') {
+            // For referrals tab, populate referred users
+            userData = await User.findById(user._id).populate('redeemedUsers');
+        } else if (activeTab === 'orders') {
            
             searchQuery = req.query.search || '';
             

@@ -2,8 +2,9 @@ const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
 const User = require("../../models/userSchema");
-const {Product} = require('../../models/productSchema')
+const Product = require('../../models/productSchema')
 const {Category} = require('../../models/categorySchema')
+const WalletTransaction = require('../../models/walletTransactionSchema');
 require("dotenv").config();
 
 const loadVerifyOTP = (req, res) => {
@@ -326,6 +327,80 @@ const loadPageNotFound = (req, res) => {
 
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+
+const generateReferralCode = (name, email) => {
+    const namePrefix = name.substring(0, 3).toUpperCase();
+    const randomChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const timestamp = Date.now().toString().slice(-4);
+    return `${namePrefix}${randomChars}${timestamp}`;
+};
+
+
+const processReferralReward = async (referrerId, newUserId) => {
+    try {
+        const referrer = await User.findById(referrerId);
+        const newUser = await User.findById(newUserId);
+        
+        if (!referrer || !newUser) return;
+        
+    
+        const newUserReward = 35;
+        newUser.wallet += newUserReward;
+        
+        
+        const newUserTransaction = new WalletTransaction({
+            user: newUserId,
+            amount: newUserReward,
+            type: 'credit',
+            description: 'Referral bonus for joining with a referral code'
+        });
+        
+      
+        const referrerReward = newUserReward * 2;
+        referrer.wallet += referrerReward;
+        
+    
+        referrer.redeemedUsers.push(newUserId);
+        
+      
+        const referrerTransaction = new WalletTransaction({
+            user: referrerId,
+            amount: referrerReward,
+            type: 'credit',
+            description: `Referral reward for inviting ${newUser.name}`
+        });
+      
+        await Promise.all([
+            newUser.save(),
+            referrer.save(),
+            newUserTransaction.save(),
+            referrerTransaction.save()
+        ]);
+        
+        
+        await User.findByIdAndUpdate(newUserId, {
+            $push: {
+                notifications: {
+                    message: `You received ₹${newUserReward} in your wallet as a referral bonus!`,
+                    type: 'wallet'
+                }
+            }
+        });
+        
+        await User.findByIdAndUpdate(referrerId, {
+            $push: {
+                notifications: {
+                    message: `You received ₹${referrerReward} in your wallet for referring ${newUser.name}!`,
+                    type: 'wallet'
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error processing referral reward:', error);
+    }
+};
+
 async function sendVerification({ email, otp }) {
     try {
         const transporter = nodemailer.createTransport({
@@ -354,7 +429,7 @@ async function sendVerification({ email, otp }) {
 
 const signup = async (req, res) => {
     try {
-        const { name, email, password, cPassword } = req.body;
+        const { name, email, password, cPassword, referalCode } = req.body;
 
         if (password !== cPassword) {
             return res.render("signup", { message: "Passwords do not match" });
@@ -363,6 +438,16 @@ const signup = async (req, res) => {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.render("signup", { message: "User already exists" });
+        }
+
+   
+        let referrerId = null;
+        if (referalCode) {
+            const referrer = await User.findOne({ referalCode });
+            if (!referrer) {
+                return res.render("signup", { message: "Invalid referral code" });
+            }
+            referrerId = referrer._id;
         }
 
         const otp = generateOtp();
@@ -375,9 +460,8 @@ const signup = async (req, res) => {
 
         req.session.userOtp = otp;
         req.session.otpTimestamp = Date.now();
-        req.session.userData = { name, email, password };
+        req.session.userData = { name, email, password, referrerId };
 
-        
         return res.redirect("/verifyOTP");
     } catch (error) {
         console.error("Signup error:", error);
@@ -406,27 +490,36 @@ const verifyOTP = async (req, res) => {
         const enteredOtp = `${digit1}${digit2}${digit3}${digit4}${digit5}${digit6}`;
 
         if (enteredOtp === req.session.userOtp) {
-            const { name, email, password } = req.session.userData;
+            const { name, email, password, referrerId } = req.session.userData;
             const hashedPassword = await bcrypt.hash(password, 10);
-
+            
+            // Generate a unique referral code
+            const referalCode = generateReferralCode(name, email);
+            
             const newUser = new User({
                 name,
                 email,
                 password: hashedPassword,
                 verified: true,
+                referalCode,
+                referredBy: referrerId
             });
 
             await newUser.save();
+            
+            // Handle referral rewards if user was referred
+            if (referrerId) {
+                await processReferralReward(referrerId, newUser._id);
+            }
 
-       
             req.session.user = {
                 _id: newUser._id,
                 name: newUser.name,
                 email: newUser.email,
-                verified: newUser.verified
+                verified: newUser.verified,
+                referalCode: newUser.referalCode
             };
 
-         
             req.session.userOtp = null;
             req.session.userData = null;
             req.session.otpTimestamp = null;
@@ -1122,37 +1215,6 @@ const loadBasketball = async (req, res) => {
     }
 };
 
-
-
-
-const loadProfile = async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.redirect('/login');
-        }
-
-        const userId = req.session.user._id;
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return res.redirect('/login');
-        }
-
-        // Fetch addresses from the Address model
-        const addresses = await Address.find({ userId: userId }).sort({ isDefault: -1, createdAt: -1 });
-
-        res.render('profile', {
-            user,
-            addresses,
-            activeTab: req.query.tab || 'details'
-        });
-    } catch (error) {
-        console.error('Error:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-};
-
-// Profile-related functions moved to profileController.js
 
 const loadForgotPassword = (req, res) => {
     try {

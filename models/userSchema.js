@@ -95,21 +95,27 @@ const userSchema = mongoose.Schema({
     },
 
     referalCode: {
-        type:String
+        type: String,
+        unique: true
     },
 
-    redeemed : {
-        type:Boolean,
-
-
+    redeemed: {
+        type: Boolean,
+        default: false
     },
 
     redeemedUsers: [
         {
-          type:mongoose.Schema.Types.ObjectId,
-          ref:"User"
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
         }
     ],
+    
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
 
     searchHistory : [ {
 

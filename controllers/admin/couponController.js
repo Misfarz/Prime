@@ -1,13 +1,26 @@
 const Coupon = require('../../models/couponSchema');
 
-// Load coupon management page
+
 const loadCoupons = async (req, res) => {
     try {
+        // Fetch all coupons
         const coupons = await Coupon.find().sort({ createdOn: -1 });
+        
+        // Calculate accurate usage count based on userId array length
+        const couponsWithAccurateCount = coupons.map(coupon => {
+            // Create a plain JavaScript object from the Mongoose document
+            const couponObj = coupon.toObject();
+            
+            // Set the usageCount to the length of the userId array
+            // This ensures the count shown in the admin panel is accurate
+            couponObj.usageCount = coupon.userId ? coupon.userId.length : 0;
+            
+            return couponObj;
+        });
         
         res.render('coupons', {
             admin: req.session.admin,
-            coupons,
+            coupons: couponsWithAccurateCount,
             currentPage: 'coupons'
         });
     } catch (error) {
@@ -16,7 +29,7 @@ const loadCoupons = async (req, res) => {
     }
 };
 
-// Create a new coupon
+
 const createCoupon = async (req, res) => {
     try {
         const {
@@ -29,7 +42,7 @@ const createCoupon = async (req, res) => {
             usageLimit
         } = req.body;
 
-        // Validate required fields
+       
         if (!name || !expireOn || !offerPrice || !minimumPrice) {
             return res.status(400).json({
                 success: false,
@@ -37,7 +50,7 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        // Validate expiry date (must be in the future)
+       
         const expireDate = new Date(expireOn);
         if (expireDate <= new Date()) {
             return res.status(400).json({
@@ -46,7 +59,7 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        // Validate offer price
+   
         if (offerPrice <= 0) {
             return res.status(400).json({
                 success: false,
@@ -54,7 +67,6 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        // Validate minimum price
         if (minimumPrice < 0) {
             return res.status(400).json({
                 success: false,
@@ -62,7 +74,7 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        // Validate percentage discount (must be between 1 and 100)
+      
         if (discountType === 'percentage' && (offerPrice < 1 || offerPrice > 100)) {
             return res.status(400).json({
                 success: false,
@@ -70,7 +82,7 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        // Check if coupon with same name already exists
+       
         const existingCoupon = await Coupon.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
         if (existingCoupon) {
             return res.status(400).json({
@@ -79,7 +91,7 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        // Create new coupon
+        
         const newCoupon = new Coupon({
             name: name.toUpperCase(), // Store coupon names in uppercase
             description,
@@ -106,7 +118,7 @@ const createCoupon = async (req, res) => {
     }
 };
 
-// Delete a coupon
+
 const deleteCoupon = async (req, res) => {
     try {
         const { couponId } = req.params;
@@ -134,7 +146,7 @@ const deleteCoupon = async (req, res) => {
     }
 };
 
-// Toggle coupon status (active/inactive)
+
 const toggleCouponStatus = async (req, res) => {
     try {
         const { couponId } = req.params;
@@ -164,7 +176,7 @@ const toggleCouponStatus = async (req, res) => {
     }
 };
 
-// Get coupon details for editing
+
 const getCouponDetails = async (req, res) => {
     try {
         const { couponId } = req.params;
@@ -190,7 +202,6 @@ const getCouponDetails = async (req, res) => {
     }
 };
 
-// Update an existing coupon
 const updateCoupon = async (req, res) => {
     try {
         const { couponId } = req.params;
@@ -204,7 +215,7 @@ const updateCoupon = async (req, res) => {
             usageLimit
         } = req.body;
 
-        // Find the coupon
+        
         const coupon = await Coupon.findById(couponId);
         if (!coupon) {
             return res.status(404).json({
@@ -213,7 +224,7 @@ const updateCoupon = async (req, res) => {
             });
         }
 
-        // Validate required fields
+      
         if (!name || !expireOn || !offerPrice || !minimumPrice) {
             return res.status(400).json({
                 success: false,
@@ -221,7 +232,7 @@ const updateCoupon = async (req, res) => {
             });
         }
 
-        // Validate expiry date (must be in the future)
+   
         const expireDate = new Date(expireOn);
         if (expireDate <= new Date()) {
             return res.status(400).json({
@@ -230,7 +241,7 @@ const updateCoupon = async (req, res) => {
             });
         }
 
-        // Validate offer price
+   
         if (offerPrice <= 0) {
             return res.status(400).json({
                 success: false,
@@ -238,7 +249,7 @@ const updateCoupon = async (req, res) => {
             });
         }
 
-        // Validate minimum price
+       
         if (minimumPrice < 0) {
             return res.status(400).json({
                 success: false,
@@ -246,7 +257,7 @@ const updateCoupon = async (req, res) => {
             });
         }
 
-        // Validate percentage discount (must be between 1 and 100)
+       
         if (discountType === 'percentage' && (offerPrice < 1 || offerPrice > 100)) {
             return res.status(400).json({
                 success: false,
@@ -254,7 +265,7 @@ const updateCoupon = async (req, res) => {
             });
         }
 
-        // Check if coupon with same name already exists (excluding current coupon)
+
         if (name.toUpperCase() !== coupon.name) {
             const existingCoupon = await Coupon.findOne({ 
                 name: { $regex: new RegExp(`^${name}$`, 'i') },
@@ -269,7 +280,7 @@ const updateCoupon = async (req, res) => {
             }
         }
 
-        // Update coupon
+     
         coupon.name = name.toUpperCase();
         coupon.description = description;
         coupon.expireOn = expireDate;

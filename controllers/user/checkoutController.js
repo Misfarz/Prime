@@ -1,5 +1,5 @@
 const Cart = require('../../models/cartSchema');
-const {Product} = require('../../models/productSchema');
+const Product = require('../../models/productSchema');
 const User = require('../../models/userSchema');
 const Address = require('../../models/addressSchema');
 const Order = require('../../models/orderSchema');
@@ -9,7 +9,7 @@ const { sendWalletNotification } = require('../../utils/walletNotifier');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-// Initialize Razorpay with your key_id and key_secret
+ 
 const razorpay = new Razorpay({
     key_id: process.env.Razorpay_key_id,
     key_secret: process.env.Razorpay_key_secret
@@ -49,29 +49,28 @@ const loadCheckout = async (req, res, next) => {
         const cartItems = cart.items.map(item => {
             const product = item.product;
             
-            // Determine if there's an offer to apply - always use the larger offer
             let appliedOffer = 0;
             let offerType = null;
             
-            // Check if product has an offer
+        
             if (product.productOffer && product.productOffer > 0) {
                 appliedOffer = product.productOffer;
                 offerType = 'product';
             }
             
-            // Check if category has an offer and compare with product offer
+            
             if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
-                // Only update if category offer is larger than product offer
+                
                 if (product.category.categoryOffer > appliedOffer) {
                     appliedOffer = product.category.categoryOffer;
                     offerType = 'category';
                 }
             }
             
-            // Calculate the final price based on offers and sale price
+      
             let itemPrice;
             if (appliedOffer > 0) {
-                // Use sale price as base price if available, otherwise use regular price
+             
                 const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
                 itemPrice = Math.round(basePrice * (1 - appliedOffer/100));
             } else if (product.salePrice && product.salePrice < product.regularPrice) {
@@ -96,7 +95,7 @@ const loadCheckout = async (req, res, next) => {
         const shipping = 50;
         const tax = Math.round(subtotal * 0.05);
         
-        // Check if there's an applied coupon
+      
         let couponDiscount = 0;
         let couponCode = '';
         
@@ -107,41 +106,40 @@ const loadCheckout = async (req, res, next) => {
         
         const total = subtotal + shipping + tax - couponDiscount;
         
-        // Fetch available coupons for the user
+     
         const currentDate = new Date();
         let availableCoupons = [];
         
         try {
-            // First, get all active coupons that haven't expired
-            // Use strict date comparison to ensure expired coupons don't show up
+           
             availableCoupons = await Coupon.find({
                 isList: true,
                 expireOn: { $gt: currentDate }
-            }).sort({ offerPrice: -1 }); // Sort by highest discount first
+            }).sort({ offerPrice: -1 });
             
-            console.log('Current date for coupon filtering:', currentDate);
-            console.log('Available coupons before filtering:', availableCoupons.length);
+
             
-            // Then filter them in JavaScript for usage limits, user restrictions, and double-check expiration
+            
+            // Filter available coupons that are valid for this user
             availableCoupons = availableCoupons.filter(coupon => {
-                // Double-check expiration date (belt and suspenders approach)
+                // Check if coupon is not expired
                 const notExpired = new Date(coupon.expireOn) > currentDate;
                 
-                // Check usage limit
+                // Check if coupon has available uses left
                 const hasAvailableUses = coupon.usageLimit === 0 || coupon.usageCount < coupon.usageLimit;
                 
-                // Check if user has already used this coupon
+                // Check if user has not used this coupon before - this is the key validation
+                // that ensures a coupon can only be used once per user
                 const userHasNotUsed = !coupon.userId || !Array.isArray(coupon.userId) || !coupon.userId.includes(userId);
                 
                 return notExpired && hasAvailableUses && userHasNotUsed;
             });
             
-            console.log('Available coupons after filtering:', availableCoupons.length);
-            console.log('Filtered coupon expiry dates:', availableCoupons.map(c => ({ name: c.name, expiry: c.expireOn })));
+       
         } catch (err) {
             console.error('Error fetching available coupons:', err);
-            // Don't throw error, just continue with empty coupons array
-            availableCoupons = [];
+           
+            availableCoupons = []; 
         }
       
         res.render('checkout', {
@@ -179,31 +177,28 @@ const placeOrder = async (req, res) => {
             return res.redirect('/login');
         }
 
-        // Debug request body
+
         console.log('Request body:', req.body);
         console.log('Request headers:', req.headers);
         console.log('Content-Type:', req.headers['content-type']);
         console.log('Payment Method (raw):', req.body?.paymentMethod);
         console.log('Payment Method (type):', typeof req.body?.paymentMethod);
         
-        // Safely access properties
+        
         const userId = req.session.user._id;
         let addressId, paymentMethod, razorpayPaymentId, razorpayOrderId, razorpaySignature;
         
-        // Handle undefined req.body (happens with some content types)
+       
         if (!req.body) {
-            // For multipart/form-data or when body parsing fails
+          
             if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
-                // Try to extract from the multipart form data
-                // Since we're using a direct form submission now, this shouldn't be needed
-                // but keeping it for backward compatibility
                 return res.status(400).json({
                     success: false,
                     message: 'Unable to process form data. Please try again.'
                 });
             }
         } else {
-            // Normal form or JSON data
+            
             addressId = req.body.addressId;
             paymentMethod = req.body.paymentMethod;
             razorpayPaymentId = req.body.razorpayPaymentId;
@@ -220,12 +215,12 @@ const placeOrder = async (req, res) => {
                 message: 'Address and payment method are required'
             });
         }
-        
-        // Convert to lowercase for consistent comparison
+
+       
         const paymentMethodLower = paymentMethod.toLowerCase();
         console.log('Payment method (lowercase):', paymentMethodLower);
         
-        // If payment method is Razorpay but we don't have payment details yet, create a Razorpay order
+  
         if ((paymentMethodLower === 'razorpay') && !razorpayPaymentId) {
             const user = await User.findById(userId);
             const cart = await Cart.findOne({ user: userId }).populate({
@@ -250,13 +245,13 @@ const placeOrder = async (req, res) => {
                 });
             }
             
-            // Calculate order total
+           
             let subtotal = 0;
             cart.items.forEach(item => {
                 const product = item.product;
                 let itemPrice;
                 
-                // Calculate price with offers
+             
                 let appliedOffer = 0;
                 
                 if (product.productOffer && product.productOffer > 0) {
@@ -291,18 +286,18 @@ const placeOrder = async (req, res) => {
             
             const total = subtotal + shipping + tax - couponDiscount;
             
-            // Create a Razorpay order
+        
             const options = {
-                amount: total * 100, // Razorpay amount is in paisa (1/100 of INR)
+                amount: total * 100, 
                 currency: 'INR',
                 receipt: 'order_' + Date.now(),
-                payment_capture: 1 // Auto-capture payment
+                payment_capture: 1 
             };
             
             try {
                 const razorpayOrder = await razorpay.orders.create(options);
                 
-                // Return the order details to the client
+               
                 return res.status(200).json({
                     success: true,
                     razorpayOrderId: razorpayOrder.id,
@@ -329,8 +324,8 @@ const placeOrder = async (req, res) => {
         
         // If we have Razorpay payment details, verify the payment
         if (paymentMethodLower === 'razorpay' && razorpayPaymentId && razorpayOrderId && razorpaySignature) {
-            console.log(razorpaySignature)
-            // Verify the payment signature
+          
+           
             const generated_signature = crypto
                 .createHmac('sha256', process.env.Razorpay_key_secret)
                 .update(razorpayOrderId + '|' + razorpayPaymentId)
@@ -342,10 +337,10 @@ const placeOrder = async (req, res) => {
                     message: 'Payment verification failed'
                 });
             }
-            // Payment is verified, continue with order creation
+          
         }
         
-        // For all payment methods, proceed with order creation
+      
         const user = await User.findById(userId);
         const cart = await Cart.findOne({ user: userId }).populate({
             path: 'items.product',
@@ -369,35 +364,33 @@ const placeOrder = async (req, res) => {
             });
         }
         
-        // Calculate order details
+     
         let subtotal = 0;
         
         const orderItems = cart.items.map(item => {
             const product = item.product;
             
-            // Determine if there's an offer to apply - always use the larger offer
             let appliedOffer = 0;
             let offerType = null;
-            
-            // Check if product has an offer
+     
             if (product.productOffer && product.productOffer > 0) {
                 appliedOffer = product.productOffer;
                 offerType = 'product';
             }
             
-            // Check if category has an offer and compare with product offer
+       
             if (product.category && product.category.categoryOffer && product.category.categoryOffer > 0) {
-                // Only update if category offer is larger than product offer
+         
                 if (product.category.categoryOffer > appliedOffer) {
                     appliedOffer = product.category.categoryOffer;
                     offerType = 'category';
                 }
             }
             
-            // Calculate the final price based on offers and sale price
+          
             let itemPrice;
             if (appliedOffer > 0) {
-                // Use sale price as base price if available, otherwise use regular price
+          
                 const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
                 itemPrice = Math.round(basePrice * (1 - appliedOffer/100));
             } else if (product.salePrice && product.salePrice < product.regularPrice) {
@@ -421,7 +414,7 @@ const placeOrder = async (req, res) => {
         const shipping = 50; 
         const tax = Math.round(subtotal * 0.05);
         
-        // Check if there's an applied coupon
+      
         let couponDiscount = 0;
         let couponCode = '';
         let couponId = null;
@@ -434,11 +427,9 @@ const placeOrder = async (req, res) => {
         
         const total = subtotal + shipping + tax - couponDiscount;
 
-        // Create the new order
-        // Handle wallet payment
         let walletTransaction;
         if (paymentMethodLower === 'wallet') {
-            // Check if user has sufficient balance
+          
             if (user.wallet < total) {
                 return res.status(400).json({
                     success: false,
@@ -446,11 +437,11 @@ const placeOrder = async (req, res) => {
                 });
             }
             
-            // Deduct the amount from wallet
+         
             user.wallet -= total;
             await user.save();
             
-            // Create a temporary transaction record - we'll update it with the order ID later
+        
             walletTransaction = new WalletTransaction({
                 user: userId,
                 amount: total,
@@ -459,8 +450,8 @@ const placeOrder = async (req, res) => {
                 date: new Date()
             });
             
-            // We'll save this after creating the order to include the order ID
-            console.log('Created wallet transaction for payment:', walletTransaction);
+      
+      
         }
         
         const newOrder = new Order({
@@ -489,7 +480,7 @@ const placeOrder = async (req, res) => {
 
         const savedOrder = await newOrder.save();
 
-        // If this was a wallet payment, update the transaction with the order ID and save it
+        
         if (paymentMethodLower === 'wallet' && walletTransaction) {
             try {
                 walletTransaction.orderId = savedOrder._id;
@@ -497,7 +488,7 @@ const placeOrder = async (req, res) => {
                 const savedTransaction = await walletTransaction.save();
                 console.log('Saved wallet transaction:', savedTransaction);
                 
-                // Send notification about the wallet payment
+              
                 await sendWalletNotification(
                     userId,
                     'debit',
@@ -506,18 +497,35 @@ const placeOrder = async (req, res) => {
                 );
             } catch (error) {
                 console.error('Error saving wallet transaction:', error);
-                // Continue with order processing even if wallet transaction saving fails
+                
             }
         }
         
-        // Update user's order history
+   
         user.orderHistory.push(savedOrder._id);
         await user.save();
         
-        // Clear the user's cart
+ 
+     
+        if (cart.coupon && cart.coupon.couponId) {
+            const coupon = await Coupon.findById(cart.coupon.couponId);
+            if (coupon) {
+                // Ensure user ID is in the coupon's userId array
+                if (!coupon.userId.includes(userId)) {
+                    coupon.userId.push(userId);
+                   
+                    coupon.usageCount += 1;
+                }
+              
+                await coupon.save();
+                console.log(`Permanently recorded coupon usage for user ${userId} and coupon ${coupon.name}. Usage count: ${coupon.usageCount}`);
+            }
+        }
+        
+       
         await Cart.findOneAndUpdate(
             { user: userId },
-            { $set: { items: [], totalAmount: 0, coupon: undefined } }
+            { $set: { items: [], totalAmount: 0 }, $unset: { coupon: 1 } }
         );
 
         
@@ -566,17 +574,17 @@ const placeOrder = async (req, res) => {
         }
 
         
-        // Check if this is a form submission that expects a redirect (not fetch/AJAX)
+       
         const expectsRedirect = req.headers['content-type'] === 'application/x-www-form-urlencoded' && 
                                !req.xhr && 
                                !req.headers['x-requested-with'];
         
-        // For Razorpay payments with form submission, redirect directly
+      
         if (expectsRedirect && ((paymentMethodLower === 'razorpay' && razorpayPaymentId) || paymentMethodLower === 'cod' || paymentMethodLower === 'wallet')) {
             return res.redirect(`/order-success/${savedOrder._id}`);
         }
         
-        // For AJAX/fetch requests, return JSON
+        
         return res.status(200).json({
             success: true,
             message: 'Order placed successfully',
@@ -637,10 +645,10 @@ const orderSuccess = async (req, res) => {
 
 const paymentError = async (req, res) => {
     try {
-        // Get error details from query parameters
+       
         const { error, code, order_id } = req.query;
         
-        // Default error message if none provided
+      
         const errorMessage = error || "Your payment could not be processed. Please try again.";
         
         res.render('payment-error', {

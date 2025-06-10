@@ -242,9 +242,9 @@
         const closeDeleteModalBtn = document.getElementById('closeDeleteModalBtn');
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         
-        // Open add coupon modal
+      
         addCouponBtn.addEventListener('click', function() {
-            // Reset form for adding new coupon
+            
             document.getElementById('addCouponForm').reset();
             document.getElementById('couponModalLabel').textContent = 'Add New Coupon';
             document.getElementById('saveCouponBtn').textContent = 'Save Coupon';
@@ -275,7 +275,7 @@
                             const coupon = data.coupon;
                             const form = document.getElementById('addCouponForm');
                             
-                            // Fill form with coupon data
+                            
                             form.elements['name'].value = coupon.name;
                             form.elements['description'].value = coupon.description || '';
                             form.elements['discountType'].value = coupon.discountType;
@@ -283,7 +283,7 @@
                             form.elements['minimumPrice'].value = coupon.minimumPrice;
                             form.elements['usageLimit'].value = coupon.usageLimit;
                             
-                            // Format date for datetime-local input
+                           
                             const expireDate = new Date(coupon.expireOn);
                             const year = expireDate.getFullYear();
                             const month = String(expireDate.getMonth() + 1).padStart(2, '0');
@@ -293,7 +293,7 @@
                             const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
                             form.elements['expireOn'].value = formattedDate;
                             
-                            // Show modal
+                           
                             addCouponModal.classList.remove('hidden');
                             document.body.classList.add('overflow-hidden');
                         } else {
@@ -313,7 +313,7 @@
                 addCouponModal.classList.add('hidden');
                 document.body.classList.remove('overflow-hidden');
                 document.getElementById('addCouponForm').reset();
-            });
+            }); 
         });
         
         // Close delete modal

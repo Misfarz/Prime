@@ -1,6 +1,6 @@
 const Order = require('../../models/orderSchema');
 const User = require('../../models/userSchema');
-const { Product } = require('../../models/productSchema');
+const  Product  = require('../../models/productSchema');
 const WalletTransaction = require('../../models/walletTransactionSchema');
 const { sendWalletNotification } = require('../../utils/walletNotifier');
 

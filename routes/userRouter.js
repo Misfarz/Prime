@@ -10,6 +10,22 @@ const couponController = require('../controllers/user/couponController');
 const { userAuth } = require('../middleware/auth');
 const passport = require('passport');
 const multer = require('multer');
+
+// --- Multer Storage for Return Images ---
+const returnStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = 'public/uploads/returns';
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, req.params.orderId + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const path = require('path');
 const fs = require('fs');
 
@@ -126,7 +142,13 @@ router.post('/coupons/remove', userAuth, couponController.removeCoupon);
 router.get('/orders', userAuth, orderController.loadOrders);
 router.get('/orders/:orderId', userAuth, orderController.loadOrderDetails);
 router.post('/orders/:orderId/cancel', userAuth, orderController.cancelOrder);
-router.post('/orders/:orderId/return', userAuth, orderController.returnOrder);
+const uploadReturnImages = multer({ 
+  storage: returnStorage, 
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 3 }
+}).array('returnImages', 3);
+
+router.post('/orders/:orderId/return', userAuth, uploadReturnImages, orderController.returnOrder);
 router.get('/orders/:orderId/invoice', userAuth, orderController.generateInvoice);
 
 router.get('/profile', userAuth, profileController.loadProfile);

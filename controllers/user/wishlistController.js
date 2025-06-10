@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const User = require("../../models/userSchema");
-const { Product } = require('../../models/productSchema');
+const Product  = require('../../models/productSchema');
 
 
 const loadWishlist = async (req, res) => {

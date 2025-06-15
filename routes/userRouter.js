@@ -132,7 +132,7 @@ router.post('/cart/validate-checkout', userAuth, cartController.validateCartForC
 router.get('/checkout', userAuth, checkoutController.loadCheckout);
 router.post('/checkout/place-order', userAuth, checkoutController.placeOrder);
 router.get('/order-success/:orderId', userAuth, checkoutController.orderSuccess);
-router.get('/payment-error', userAuth, checkoutController.paymentError);
+
 
 // Coupon routes
 router.post('/coupons/apply', userAuth, couponController.applyCoupon);
@@ -215,14 +215,26 @@ router.post('/verify-reset-otp', userController.verifyResetOTP);
 router.post('/resend-reset-otp', userController.resendResetOTP);
 router.post('/reset-password', userController.resetPassword);
 
+// payment routes
+const paymentController = require('../controllers/user/paymentController');
+
+// Proceed to payment (from checkout)
+router.post('/proceed-payment', userAuth, paymentController.proceedPayment);
+
+// Choose payment (cod / wallet / razorpay)
+router.post('/choose-payment', userAuth, paymentController.choosePayment);
+
+// Razorpay verification callback
+router.post('/razorpay/verify', userAuth, paymentController.verifyRazorpayPayment);
+
+// Payment failure page
+router.get('/paymentFailure', userAuth, paymentController.paymentFailure);
+
+// Payment success will reuse existing order success handler
+router.get('/paymentSuccess/:orderId', userAuth, checkoutController.orderSuccess);
 
 
 
-
-//demo routes for test
-const democontroller = require('../controllers/user/checkoutdemo')
-
-router.get('/demo', democontroller.loadDemoCheckout)
 
 
 

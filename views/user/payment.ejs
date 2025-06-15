@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Prime</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .payment-option {
+            transition: all 0.15s ease;
+        }
+        .payment-option:hover {
+            border-color: #000;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <%- include('../partials/user/header') %>
+
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-medium">Complete Your Payment</h1>
+            <div class="w-16 h-px bg-gray-300 mx-auto mt-3"></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Payment Methods -->
+            <div class="lg:col-span-2 bg-white rounded-lg p-6">
+                <h2 class="text-lg font-medium mb-5">Payment Method</h2>
+                
+                <form id="paymentForm" class="space-y-4">
+                    <!-- COD -->
+                    <div class="payment-option border rounded-lg p-4 <%= summary.total > 1000 ? 'opacity-60' : 'cursor-pointer' %>">
+                        <label class="flex items-center space-x-3">
+                            <input 
+                                type="radio" 
+                                name="payment" 
+                                value="cod" 
+                                class="w-4 h-4" 
+                                <%= summary.total > 1000 ? 'disabled' : 'checked' %>
+                            >
+                            <div class="flex-1">
+                                <span class="font-medium">Cash on Delivery</span>
+                                <% if (summary.total > 1000) { %>
+                                    <p class="text-xs text-red-500 mt-1">Not available for orders above ₹1000</p>
+                                <% } %>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Razorpay -->
+                    <div class="payment-option border rounded-lg p-4 cursor-pointer">
+                        <label class="flex items-center space-x-3">
+                            <input 
+                                type="radio" 
+                                name="payment" 
+                                value="razorpay" 
+                                class="w-4 h-4" 
+                                <%= summary.total > 1000 ? 'checked' : '' %>
+                            >
+                            <span class="font-medium">Razorpay</span>
+                        </label>
+                    </div>
+
+                    <!-- Wallet -->
+                    <div class="payment-option border rounded-lg p-4 <%= user.wallet < summary.total ? 'opacity-60' : 'cursor-pointer' %>">
+                        <label class="flex items-center space-x-3">
+                            <input 
+                                type="radio" 
+                                name="payment" 
+                                value="wallet" 
+                                class="w-4 h-4" 
+                                <%= user.wallet < summary.total ? 'disabled' : '' %>
+                            >
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">Wallet</span>
+                                    <span class="text-sm <%= user.wallet >= summary.total ? 'text-green-600' : 'text-gray-500' %>">
+                                        ₹<%= user.wallet.toFixed(2) %>
+                                    </span>
+                                </div>
+                                <% if (user.wallet < summary.total) { %>
+                                    <p class="text-xs text-red-500 mt-1">
+                                        Needs ₹<%= (summary.total - user.wallet).toFixed(2) %> more
+                                    </p>
+                                <% } %>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="pt-4">
+                        <button 
+                            type="submit" 
+                            id="payBtn" 
+                            class="w-full bg-black text-white py-3 rounded-md font-medium hover:bg-gray-800 transition"
+                        >
+                            Confirm Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="bg-white rounded-lg p-6">
+                <h2 class="text-lg font-medium mb-4">Order Summary</h2>
+                
+                <div class="space-y-3 text-sm mb-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Subtotal</span>
+                        <span>₹<%= summary.subtotal.toFixed(2) %></span>
+                    </div>
+                    <% if (summary.couponDiscount > 0) { %>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Discount</span>
+                            <span class="text-green-600">-₹<%= summary.couponDiscount.toFixed(2) %></span>
+                        </div>
+                    <% } %>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Shipping</span>
+                        <span>₹<%= summary.shipping.toFixed(2) %></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Tax</span>
+                        <span>₹<%= summary.tax.toFixed(2) %></span>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <div class="flex justify-between font-medium">
+                        <span>Total</span>
+                        <span>₹<%= summary.total.toFixed(2) %></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+          
+  <%- include("../../views/partials/user/footer") %>
+    </footer>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const paymentForm = document.getElementById('paymentForm');
+            const payBtn = document.getElementById('payBtn');
+            let isProcessing = false;
+
+            paymentForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                if (isProcessing) return;
+
+                const selectedMethod = document.querySelector('input[name="payment"]:checked').value;
+                const originalBtnText = payBtn.innerHTML;
+                
+                isProcessing = true;
+                payBtn.disabled = true;
+                payBtn.innerHTML = 'Processing...';
+
+                try {
+                    const response = await fetch('/choose-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ payment: selectedMethod })
+                    });
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        throw new Error(data.message || 'Payment failed');
+                    }
+
+                    if (selectedMethod === 'razorpay') {
+                        const options = {
+                            key: data.razorpay.key,
+                            amount: data.razorpay.amount,
+                            currency: data.razorpay.currency,
+                            order_id: data.razorpay.order_id,
+                            name: 'Prime',
+                            description: 'Order Payment',
+                            handler: async function (response) {
+                                payBtn.innerHTML = 'Verifying...';
+                                const verifyResponse = await fetch('/razorpay/verify', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        razorpay_payment_id: response.razorpay_payment_id,
+                                        razorpay_order_id: response.razorpay_order_id,
+                                        razorpay_signature: response.razorpay_signature
+                                    })
+                                });
+                                const verifyData = await verifyResponse.json();
+                                if (verifyData.success) {
+                                    window.location.href = `/paymentSuccess/${verifyData.orderId}`;
+                                } else {
+                                    throw new Error(verifyData.message || 'Verification failed');
+                                }
+                            },
+                            prefill: data.razorpay.prefill,
+                            modal: {
+                                ondismiss: function () {
+                                    isProcessing = false;
+                                    payBtn.innerHTML = originalBtnText;
+                                    payBtn.disabled = false;
+                                }
+                            }
+                        };
+                        const rzp = new Razorpay(options);
+                        rzp.on('payment.failed', function (response) {
+                            window.location.href = `/paymentFailure?error=${encodeURIComponent(response.error.description)}`;
+                        });
+                        rzp.open();
+                    } else if (data.redirect) {
+                        window.location.href = data.redirect;
+                    }
+                } catch (error) {
+                    alert(error.message);
+                    isProcessing = false;
+                    payBtn.innerHTML = originalBtnText;
+                    payBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

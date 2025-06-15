@@ -263,7 +263,7 @@
                 <div class="space-y-3 mb-6">
                   <div class="flex justify-between">
                     <span class="text-gray-600">Subtotal</span>
-                    <span class="font-medium">₹<%= totalAmount.toFixed(2) %></span>
+                    <span class="font-medium" id="subtotal-amount">₹<%= totalAmount.toFixed(2) %></span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-gray-600">Shipping</span>
@@ -279,7 +279,7 @@
                 <div class="border-t border-gray-200 pt-4 mb-6">
                   <div class="flex justify-between items-center">
                     <span class="text-lg font-medium text-gray-900">Total</span>
-                    <span class="text-xl font-bold">₹<%= totalAmount.toFixed(2) %></span>
+                    <span class="text-xl font-bold" id="total-amount">₹<%= totalAmount.toFixed(2) %></span>
                   </div>
                 </div>
                 
@@ -481,8 +481,8 @@
     
   
     function updateOrderSummary(total) {
-      const subtotalElement = document.querySelector('.flex.justify-between:first-child span:last-child');
-      const totalElement = document.querySelector('.flex.justify-between.items-center span:last-child');
+      const subtotalElement = document.getElementById('subtotal-amount');
+      const totalElement = document.getElementById('total-amount');
       
       if (subtotalElement && totalElement) {
         subtotalElement.textContent = `₹${total.toFixed(2)}`;

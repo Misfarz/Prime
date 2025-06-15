@@ -1,4 +1,4 @@
-const  Product  = require("../../models/productSchema");
+const Product = require("../../models/productSchema");
 const { Category } = require("../../models/categorySchema");
 
 const getProducts = async (req, res) => {
@@ -56,9 +56,8 @@ const saveProduct = async (req, res) => {
 
     const existingProductName = await Product.findOne({
       productName: { $regex: new RegExp(`^${productName}$`, "i") },
-      _id:{$ne: productId}
+      _id: { $ne: productId },
     });
-
 
     if (existingProductName) {
       return res.status(400).send("Product already exists");

@@ -97,7 +97,29 @@
                 
                 <div class="p-4 bg-gray-50 rounded-lg">
                     <h3 class="text-sm font-medium text-gray-500 mb-1">Payment Status</h3>
-                    <p class="font-medium"><%= order.paymentStatus %></p>
+                    <% 
+                    let paymentStatusText = order.paymentStatus;
+                    let paymentStatusClass = '';
+                    
+                    if (order.paymentStatus === 'Refunded') {
+                        if (order.paymentMethod === 'wallet' || 
+                           (order.orderStatus === 'Returned' && order.returnStatus === 'Approved') || 
+                            order.orderStatus === 'Cancelled') {
+                            paymentStatusText = 'Refunded to Wallet';
+                            paymentStatusClass = 'text-green-600';
+                        }
+                    } else if (order.paymentStatus === 'Paid') {
+                        paymentStatusClass = 'text-green-600';
+                    }
+                    %>
+                    <p class="font-medium <%= paymentStatusClass %>"><%= paymentStatusText %></p>
+                    <% if (order.paymentStatus === 'Refunded' && 
+                          (order.paymentMethod === 'wallet' || order.orderStatus === 'Cancelled' || 
+                          (order.orderStatus === 'Returned' && order.returnStatus === 'Approved'))) { %>
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-check-circle mr-1"></i> Amount credited to your wallet
+                        </p>
+                    <% } %>
                 </div>
                 
                 <div class="p-4 bg-gray-50 rounded-lg">
@@ -284,16 +306,19 @@
         <h3 class="text-xl font-bold mb-4">Return Order</h3>
         <p class="mb-4">Are you sure you want to return this order? This action cannot be undone.</p>
         
-        <form id="return-order-form">
+        <form id="return-order-form" enctype="multipart/form-data">
             <div class="mb-4">
-                <label for="returnReason" class="block text-sm font-medium text-gray-700 mb-1">Reason for return (required)</label>
-                <textarea id="returnReason" name="returnReason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required></textarea>
-                <p class="text-xs text-red-600 mt-1">Please provide a detailed reason for your return request.</p>
+                <label for="returnReason" class="block text-sm font-medium text-gray-700 mb-1">Reason for Return</label>
+                <textarea id="returnReason" name="returnReason" rows="3" class="w-full border-gray-300 rounded-md shadow-sm" required></textarea>
             </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button type="button" id="return-modal-close" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700">Confirm Return</button>
+            <div class="mb-4">
+                <label for="returnImages" class="block text-sm font-medium text-gray-700 mb-1">Upload Images (Optional, up to 3)</label>
+                <input type="file" id="returnImages" name="returnImages" multiple accept="image/png, image/jpeg, image/gif" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"/>
+                <div id="image-preview-container" class="mt-4 grid grid-cols-3 gap-4"></div>
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button type="button" id="cancel-return-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700">Submit Return</button>
             </div>
         </form>
     </div>
@@ -313,10 +338,15 @@
                 <textarea id="returnItemReason" name="returnReason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required></textarea>
                 <p class="text-xs text-red-600 mt-1">Please provide a detailed reason for your return request.</p>
             </div>
+        
+                
+            
             
             <div class="flex justify-end space-x-3">
                 <button type="button" id="return-item-modal-close" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
                 <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700">Confirm Return</button>
+           
+          
             </div>
         </form>
     </div>
@@ -426,49 +456,119 @@
         const returnOrderBtn = document.getElementById('return-order-btn');
         const returnOrderModal = document.getElementById('return-order-modal');
         const returnOrderForm = document.getElementById('return-order-form');
-        const returnModalClose = document.getElementById('return-modal-close');
-        
+        const cancelReturnBtn = document.getElementById('cancel-return-btn');
+        const returnImagesInput = document.getElementById('returnImages');
+        const previewContainer = document.getElementById('image-preview-container');
+
+        let selectedFiles = []; // To store files for upload
+
         if (returnOrderBtn) {
             returnOrderBtn.addEventListener('click', function() {
                 returnOrderModal.classList.remove('hidden');
             });
         }
         
-        if (returnModalClose) {
-            returnModalClose.addEventListener('click', function() {
-                returnOrderModal.classList.add('hidden');
+        const closeModal = () => {
+            returnOrderModal.classList.add('hidden');
+            returnOrderForm.reset(); // Reset form fields
+            selectedFiles = []; // Clear stored files
+            if(previewContainer) previewContainer.innerHTML = ''; // Clear previews
+        };
+
+        if (cancelReturnBtn) {
+            cancelReturnBtn.addEventListener('click', closeModal);
+        }
+
+        if (returnImagesInput && previewContainer) {
+            returnImagesInput.addEventListener('change', () => {
+                const newFiles = Array.from(returnImagesInput.files);
+                
+                if (selectedFiles.length + newFiles.length > 3) {
+                    alert('You can upload a maximum of 3 images in total.');
+                    const spaceLeft = 3 - selectedFiles.length;
+                    if (spaceLeft > 0) {
+                        selectedFiles.push(...newFiles.slice(0, spaceLeft));
+                    }
+                } else {
+                    selectedFiles.push(...newFiles);
+                }
+                
+                returnImagesInput.value = ''; // Clear input to allow re-selecting the same file
+                renderPreviews();
             });
         }
-        
+
+        function renderPreviews() {
+            if(!previewContainer) return;
+            previewContainer.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewWrapper = document.createElement('div');
+                    previewWrapper.className = 'relative w-full h-24';
+
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-full h-full object-cover rounded-lg border';
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.innerHTML = '&times;';
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold leading-none hover:bg-red-700';
+                    
+                    removeBtn.onclick = () => {
+                        selectedFiles.splice(index, 1); // Remove file from array
+                        renderPreviews(); // Re-render previews
+                    };
+
+                    previewWrapper.appendChild(img);
+                    previewWrapper.appendChild(removeBtn);
+                    previewContainer.appendChild(previewWrapper);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         if (returnOrderForm) {
             returnOrderForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
+
                 const returnReason = document.getElementById('returnReason').value;
-                
                 if (!returnReason.trim()) {
-                    alert('Please provide a reason for your return');
+                    alert('Please provide a reason for your return.');
                     return;
                 }
-                
+
+                const formData = new FormData();
+                formData.append('returnReason', returnReason);
+                selectedFiles.forEach(file => {
+                    formData.append('returnImages', file);
+                });
+
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+
                 fetch('/orders/<%= order._id %>/return', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ returnReason }),
+                    body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        alert(data.message || 'Return request submitted successfully!');
                         window.location.reload();
                     } else {
-                        alert(data.message || 'Failed to return order');
+                        alert(data.message || 'Failed to submit return request.');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit Return';
                     }
                 })
                 .catch(error => {
-                    console.error('Error returning order:', error);
-                    alert('An error occurred while returning the order');
+                    console.error('Error submitting return request:', error);
+                    alert('An error occurred while submitting your return request.');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Return';
                 });
             });
         }

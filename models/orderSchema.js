@@ -151,6 +151,15 @@ const orderSchema = new Schema({
     returnReason: {
         type: String
     },
+    returnImage:{
+        type: [String],
+        default:[]
+    },
+    returnStatus: {
+        type: String,
+        enum: ['For Verification', 'Approved', 'Rejected'],
+        default: 'For Verification'
+    },
     invoiceUrl: {
         type: String
     }

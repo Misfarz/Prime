@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sales Report – Prime.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+    <div class="flex flex-1">
+        <%- include("../../views/partials/admin/_sidebar") %>
+
+        <div class="flex-1 flex flex-col">
+            <%- include("../../views/partials/admin/_header") %>
+
+            <div class="p-6">
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold mb-2">Sales Report</h1>
+                    <p class="text-gray-600">View and analyze sales data with customizable filters</p>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="bg-white p-4 rounded-lg shadow mb-6">
+                    <form id="reportFilterForm" action="/admin/sales-report" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Filter Type</label>
+                            <select name="filterType" id="filterType" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2 px-3">
+                                <option value="daily" <%= filterType === 'daily' ? 'selected' : '' %>>Daily (Today)</option>
+                                <option value="weekly" <%= filterType === 'weekly' ? 'selected' : '' %>>Weekly (Last 7 days)</option>
+                                <option value="monthly" <%= filterType === 'monthly' ? 'selected' : '' %>>Monthly (Last 30 days)</option>
+                                <option value="yearly" <%= filterType === 'yearly' ? 'selected' : '' %>>Yearly (Last 365 days)</option>
+                                <option value="custom" <%= filterType === 'custom' ? 'selected' : '' %>>Custom Date Range</option>
+                            </select>
+                        </div>
+
+                        <div id="dateRangeContainer" class="<%= filterType === 'custom' ? '' : 'hidden' %> md:col-span-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                    <input type="date" name="startDate" id="startDate" value="<%= startDate %>" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2 px-3">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                    <input type="date" name="endDate" id="endDate" value="<%= endDate %>" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 py-2 px-3">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-end">
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
+                                Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
+                                <i class="fas fa-shopping-cart text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Total Orders</p>
+                                <p class="text-2xl font-bold"><%= totalOrders %></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                                <i class="fas fa-money-bill-wave text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Total Sales</p>
+                                <p class="text-2xl font-bold">₹<%= totalSales.toFixed(2) %></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                                <i class="fas fa-tags text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-600">Total Discount</p>
+                                <p class="text-2xl font-bold">₹<%= totalDiscount.toFixed(2) %></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Options -->
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <a href="/admin/sales-report/download/excel?filterType=<%= filterType %>&startDate=<%= startDate %>&endDate=<%= endDate %>" class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
+                        <i class="fas fa-file-excel mr-2"></i> Download Excel
+                    </a>
+                    <a href="/admin/sales-report/download/pdf?filterType=<%= filterType %>&startDate=<%= startDate %>&endDate=<%= endDate %>" class="inline-flex items-center bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out">
+                        <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                    </a>
+                </div>
+
+                <!-- Orders Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <% if (orders && orders.length > 0) { %>
+                                    <% orders.forEach(order => { %>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                <a href="/admin/orders/<%= order._id %>" class="text-indigo-600 hover:text-indigo-900">
+                                                    <%= order.orderNumber %>
+                                                </a>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <%= order.user ? order.user.name : 'Unknown' %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <%= new Date(order.createdAt).toLocaleDateString() %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <%= order.paymentMethod %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                    <%= order.orderStatus %>
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                ₹<%= order.subtotal.toFixed(2) %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                ₹<%= (order.discount || 0).toFixed(2) %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                ₹<%= order.total.toFixed(2) %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                            No orders found for the selected period
+                                        </td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show/hide date range inputs based on filter type
+        document.getElementById('filterType').addEventListener('change', function() {
+            const dateRangeContainer = document.getElementById('dateRangeContainer');
+            if (this.value === 'custom') {
+                dateRangeContainer.classList.remove('hidden');
+            } else {
+                dateRangeContainer.classList.add('hidden');
+            }
+        });
+
+        // Initialize date pickers
+        flatpickr("#startDate", {
+            dateFormat: "Y-m-d",
+            maxDate: "today"
+        });
+        
+        flatpickr("#endDate", {
+            dateFormat: "Y-m-d",
+            maxDate: "today"
+        });
+    </script>
+</body>
+</html>

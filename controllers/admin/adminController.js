@@ -1,41 +1,25 @@
-const User = require('../../models/userSchema');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
-
+const User = require("../../models/userSchema");
+const bcrypt = require("bcrypt");
+require("dotenv").config();
 
 const loadLogin = async (req, res) => {
   try {
     if (req.session.admin) {
-      return res.redirect('/admin/dashboard');
+      return res.redirect("/admin/dashboard");
     }
-    return res.render('admin-login', { message: null });
+    return res.render("admin-login", { message: null });
   } catch (error) {
     console.error("Login page not found:", error);
     return res.status(500).send("Server Error");
   }
 };
 
-
 const loadPageError = async (req, res) => {
   try {
-    return res.render('page-error');
+    return res.render("page-error");
   } catch (error) {
     console.error("Error loading error page:", error);
     return res.status(500).send("Server Error");
-  }
-};
-
-
-const loadDashboard = (req, res) => {
-  try {
-    if (req.session.admin) {
-      return res.render('dashboard');
-    } else {
-      return res.redirect('/admin/login');
-    }
-  } catch (error) {
-    console.error("Failed to load dashboard:", error);
-    return res.redirect('/page-error');
   }
 };
 
@@ -46,23 +30,22 @@ const login = async (req, res) => {
     const admin = await User.findOne({ email, isAdmin: true });
 
     if (!admin) {
-      return res.render('admin-login', { message: 'Admin does not exist' });
+      return res.render("admin-login", { message: "Admin does not exist" });
     }
 
     const passwordMatch = await bcrypt.compare(password, admin.password);
 
     if (!passwordMatch) {
-      return res.render('admin-login', { message: 'Invalid credentials' });
+      return res.render("admin-login", { message: "Invalid credentials" });
     }
 
     req.session.admin = admin;
-    return res.redirect('/admin/dashboard');
+    return res.redirect("/admin/dashboard");
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).send("Internal Server Error");
   }
 };
-
 
 const logout = (req, res) => {
   req.session.destroy((err) => {
@@ -70,7 +53,7 @@ const logout = (req, res) => {
       console.error("Logout Error:", err);
       return res.status(500).send("Internal Server Error");
     }
-    return res.redirect('/admin/login');
+    return res.redirect("/admin/login");
   });
 };
 
@@ -78,6 +61,5 @@ module.exports = {
   loadLogin,
   login,
   loadPageError,
-  loadDashboard,
-  logout
+  logout,
 };

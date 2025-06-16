@@ -39,14 +39,24 @@
           <div class="bg-white p-4 rounded border border-gray-100 shadow-sm mb-6">
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-sm font-semibold">Customer List</h2>
-              <div class="relative">
-                <input type="text" id="search" placeholder="Search customers..."
-                  class="pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
-                  onkeyup="filterCustomers()">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i class="fas fa-search text-gray-500"></i>
+              <form action="/admin/customers" method="GET" class="flex items-center space-x-2">
+                <div class="relative">
+                  <input type="text" name="search" id="search" placeholder="Search customers..."
+                    class="pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                    value="<%= typeof search !== 'undefined' ? search : '' %>">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-500"></i>
+                  </div>
                 </div>
-              </div>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+                  Search
+                </button>
+                <% if (typeof search !== 'undefined' && search) { %>
+                  <a href="/admin/customers" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times-circle"></i> Clear
+                  </a>
+                <% } %>
+              </form>
             </div>
             <div class="overflow-x-auto">
               <table class="min-w-full text-xs">
@@ -126,21 +136,7 @@
       });
 
 
-      function filterCustomers() {
-        let input = document.getElementById("search").value.toLowerCase();
-        let rows = document.querySelectorAll(".customer-row");
-
-        rows.forEach(row => {
-          let name = row.querySelector("td:nth-child(1)").textContent.toLowerCase();
-          let email = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
-
-          if (name.includes(input) || email.includes(input)) {
-            row.style.display = "table-row";
-          } else {
-            row.style.display = "none";
-          }
-        });
-      }
+      
 
       function showConfirmModal(url, action) {
         const modal = document.getElementById('confirmModal');

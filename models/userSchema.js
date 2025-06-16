@@ -60,6 +60,21 @@ const userSchema = mongoose.Schema({
         type:Number,
         default:0
     },
+    
+    notifications: [
+        {
+            message: String,
+            type: String,
+            read: {
+                type: Boolean,
+                default: false
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ],
     whishlist: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product"
@@ -80,21 +95,27 @@ const userSchema = mongoose.Schema({
     },
 
     referalCode: {
-        type:String
+        type: String,
+        unique: true
     },
 
-    redeemed : {
-        type:Boolean,
-
-
+    redeemed: {
+        type: Boolean,
+        default: false
     },
 
     redeemedUsers: [
         {
-          type:mongoose.Schema.Types.ObjectId,
-          ref:"User"
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
         }
     ],
+    
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
 
     searchHistory : [ {
 

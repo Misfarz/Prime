@@ -7,6 +7,7 @@ const categoryController = require('../controllers/admin/categoryController');
 const productController = require('../controllers/admin/productController');
 const orderController = require('../controllers/admin/orderController');
 const couponController = require('../controllers/admin/couponController');
+const dashboardController = require('../controllers/admin/dashboardController');
 const multer = require('multer');
 const path = require('path');
 
@@ -55,7 +56,6 @@ const uploadProduct = multer({
 
 router.get('/login', adminController.loadLogin);
 router.get('/pageerror', adminController.loadPageError);
-router.get('/dashboard', adminAuth, adminController.loadDashboard);
 router.get('/logout',  adminController.logout);
 router.get('/customers', adminAuth, CustomerController.customerInfo);
 router.get('/blockCustomer',adminAuth, CustomerController.customerBlocked);
@@ -85,5 +85,11 @@ router.get('/coupons/:couponId', adminAuth, couponController.getCouponDetails);
 router.put('/coupons/:couponId', adminAuth, couponController.updateCoupon);
 router.delete('/coupons/:couponId', adminAuth, couponController.deleteCoupon);
 router.patch('/coupons/:couponId/toggle-status', adminAuth, couponController.toggleCouponStatus);
+
+// admin dashboard and sales report routes
+router.get('/sales-report', adminAuth, dashboardController.loadSalesReport);
+router.get('/sales-report/download/excel', adminAuth, dashboardController.downloadExcelReport);
+router.get('/sales-report/download/pdf', adminAuth, dashboardController.downloadPdfReport);
+router.get('/dashboard', adminAuth, dashboardController.loadDashboard);
 
 module.exports = router;

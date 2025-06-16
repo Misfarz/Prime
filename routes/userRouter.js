@@ -10,6 +10,22 @@ const couponController = require('../controllers/user/couponController');
 const { userAuth } = require('../middleware/auth');
 const passport = require('passport');
 const multer = require('multer');
+
+// --- Multer Storage for Return Images ---
+const returnStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = 'public/uploads/returns';
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, req.params.orderId + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const path = require('path');
 const fs = require('fs');
 
@@ -117,6 +133,7 @@ router.get('/checkout', userAuth, checkoutController.loadCheckout);
 router.post('/checkout/place-order', userAuth, checkoutController.placeOrder);
 router.get('/order-success/:orderId', userAuth, checkoutController.orderSuccess);
 
+
 // Coupon routes
 router.post('/coupons/apply', userAuth, couponController.applyCoupon);
 router.post('/coupons/remove', userAuth, couponController.removeCoupon);
@@ -125,7 +142,13 @@ router.post('/coupons/remove', userAuth, couponController.removeCoupon);
 router.get('/orders', userAuth, orderController.loadOrders);
 router.get('/orders/:orderId', userAuth, orderController.loadOrderDetails);
 router.post('/orders/:orderId/cancel', userAuth, orderController.cancelOrder);
-router.post('/orders/:orderId/return', userAuth, orderController.returnOrder);
+const uploadReturnImages = multer({ 
+  storage: returnStorage, 
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 3 }
+}).array('returnImages', 3);
+
+router.post('/orders/:orderId/return', userAuth, uploadReturnImages, orderController.returnOrder);
 router.get('/orders/:orderId/invoice', userAuth, orderController.generateInvoice);
 
 router.get('/profile', userAuth, profileController.loadProfile);
@@ -192,14 +215,26 @@ router.post('/verify-reset-otp', userController.verifyResetOTP);
 router.post('/resend-reset-otp', userController.resendResetOTP);
 router.post('/reset-password', userController.resetPassword);
 
+// payment routes
+const paymentController = require('../controllers/user/paymentController');
+
+// Proceed to payment (from checkout)
+router.post('/proceed-payment', userAuth, paymentController.proceedPayment);
+
+// Choose payment (cod / wallet / razorpay)
+router.post('/choose-payment', userAuth, paymentController.choosePayment);
+
+// Razorpay verification callback
+router.post('/razorpay/verify', userAuth, paymentController.verifyRazorpayPayment);
+
+// Payment failure page
+router.get('/paymentFailure', userAuth, paymentController.paymentFailure);
+
+// Payment success will reuse existing order success handler
+router.get('/paymentSuccess/:orderId', userAuth, checkoutController.orderSuccess);
 
 
 
-
-//demo routes for test
-const democontroller = require('../controllers/user/checkoutdemo')
-
-router.get('/demo', democontroller.loadDemoCheckout)
 
 
 

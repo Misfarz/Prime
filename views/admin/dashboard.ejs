@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard – Prime.</title>
+    <title><%= pageTitle %> – Prime.</title> <!-- Dynamic Page Title -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js Library -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
@@ -26,13 +27,280 @@
     
         <%- include("../../views/partials/admin/_header") %>
         
-      <h1>on progress</h1>
-       
+      <div class="p-6">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold mb-2">Admin Dashboard</h1>
+          <p class="text-gray-600">Welcome to the Prime admin panel</p>
+        </div>
+
+        <!-- Quick Links Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <a href="/admin/sales-report" class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow duration-300">
+            <div class="flex items-center">
+              <div class="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4">
+                <i class="fas fa-chart-line text-xl"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Sales Report</h3>
+                <p class="text-sm text-gray-600">View and download sales reports</p>
+              </div>
+            </div>
+          </a>
+
+          <a href="/admin/orders" class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow duration-300">
+            <div class="flex items-center">
+              <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                <i class="fas fa-shopping-cart text-xl"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Orders</h3>
+                <p class="text-sm text-gray-600">Manage customer orders</p>
+              </div>
+            </div>
+          </a>
+
+          <a href="/admin/products" class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow duration-300">
+            <div class="flex items-center">
+              <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <i class="fas fa-tshirt text-xl"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Products</h3>
+                <p class="text-sm text-gray-600">Manage product inventory</p>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- Error Display -->
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline"><%= error %></span>
+          </div>
+        <% } %>
+
+        <!-- Filters Section -->
+        <div class="mb-6 flex flex-wrap items-center gap-2">
+          <span class="font-semibold mr-2">Filter Data:</span>
+          <a href="/admin/dashboard?filterType=daily" class="px-4 py-2 text-sm font-medium rounded-md <%= filterType === 'daily' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>">Daily</a>
+          <a href="/admin/dashboard?filterType=weekly" class="px-4 py-2 text-sm font-medium rounded-md <%= filterType === 'weekly' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>">Weekly</a>
+          <a href="/admin/dashboard?filterType=monthly" class="px-4 py-2 text-sm font-medium rounded-md <%= filterType === 'monthly' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>">Monthly</a>
+          <a href="/admin/dashboard?filterType=yearly" class="px-4 py-2 text-sm font-medium rounded-md <%= filterType === 'yearly' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' %>">Yearly</a>
+          <span class="text-sm text-gray-600 ml-auto">Showing data from <%= currentStartDate %> to <%= currentEndDate %></span>
+        </div>
+        
+        <!-- Period Specific Stats (Sales, Orders, Average Sales for the selected filter) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-700">Total Sales (Period)</h3>
+            <p class="text-3xl font-bold text-indigo-600 mt-2">
+              ₹<%= periodStats.totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+            </p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-700">Total Orders (Period)</h3>
+            <p class="text-3xl font-bold text-indigo-600 mt-2">
+              <%= periodStats.totalOrders.toLocaleString('en-IN') %>
+            </p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-lg font-semibold text-gray-700">Average Sales (Period)</h3>
+            <p class="text-3xl font-bold text-indigo-600 mt-2">
+              ₹<%= averageSalesValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+            </p>
+          </div>
+        </div>
+
+        <!-- Sales Trend Chart Section -->
+        <div class="grid grid-cols-1 gap-6 mb-8">
+          <!-- Sales Trend Line Chart -->
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4"><%= salesChartTitle %></h2>
+            <div class="h-80">
+              <canvas id="salesTrendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overall Site Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500">Total Users</h3>
+            <p class="text-3xl font-semibold text-gray-900 mt-1"><%= totalUsers %></p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500">Total Products</h3>
+            <p class="text-3xl font-semibold text-gray-900 mt-1"><%= totalProducts %></p>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-medium text-gray-500">Active Orders</h3>
+            <p class="text-3xl font-semibold text-gray-900 mt-1"><%= totalActiveOrders %></p>
+          </div>
+        </div>
+
+        <!-- Best Selling & Latest Orders Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <!-- Best Selling Products -->
+          <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">All-Time Top 3 Selling Products</h2>
+            <% if (bestSellingProducts && bestSellingProducts.length > 0) { %>
+              <div class="space-y-3">
+                <% bestSellingProducts.forEach(item => { %>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div class="flex items-center">
+                      <img src="<%= item.productDetails.productImage && item.productDetails.productImage.length > 0 ? item.productDetails.productImage[0] : '/placeholder.jpg' %>" alt="<%= item.productDetails.productName %>" class="w-12 h-12 object-cover rounded-md mr-4">
+                      <p class="font-semibold text-gray-800 text-sm"><%= item.productDetails.productName %></p>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-bold text-indigo-600"><%= item.totalQuantitySold %></p>
+                      <p class="text-xs text-gray-500">Sold</p>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } else { %>
+              <div class="text-center py-8">
+                  <i class="fas fa-box-open text-4xl text-gray-300 mb-2"></i>
+                  <p class="text-gray-500">No product sales data found.</p>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Best Selling Categories -->
+          <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">All-Time Top 3 Selling Categories</h2>
+            <% if (bestSellingCategoryList && bestSellingCategoryList.length > 0) { %>
+              <div class="space-y-3">
+                <% bestSellingCategoryList.forEach(category => { %>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <p class="font-semibold text-gray-800 text-sm"><%= category.categoryDetails.name %></p>
+                    <div class="text-right">
+                      <p class="font-bold text-green-600"><%= category.totalQuantitySold %></p>
+                      <p class="text-xs text-gray-500">Sold</p>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } else { %>
+              <div class="text-center py-8">
+                  <i class="fas fa-tags text-4xl text-gray-300 mb-2"></i>
+                  <p class="text-gray-500">No category sales data found.</p>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Latest Orders -->
+          <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Latest Orders</h2>
+            <% if (latestOrders && latestOrders.length > 0) { %>
+              <ul class="space-y-3">
+                <% latestOrders.forEach(order => { %>
+                  <li class="border-b pb-2 mb-2 last:border-b-0 last:pb-0 last:mb-0">
+                    <div class="flex justify-between items-center">
+                        <p class="font-medium text-sm">Order #<%= order.orderNumber %></p>
+                        <span class="text-xs px-2 py-1 rounded-full 
+                            <%= order.orderStatus === 'Delivered' ? 'bg-green-100 text-green-700' : 
+                               order.orderStatus === 'Shipped' ? 'bg-blue-100 text-blue-700' : 
+                               order.orderStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
+                               order.orderStatus === 'Processing' ? 'bg-purple-100 text-purple-700' : 
+                               order.orderStatus === 'Cancelled' ? 'bg-red-100 text-red-700' : 
+                               'bg-gray-100 text-gray-700' %>">
+                            <%= order.orderStatus %>
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500">User: <%= order.user ? order.user.name : 'N/A' %></p>
+                    <p class="text-xs text-gray-500">Total: ₹<%= order.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></p>
+                    <p class="text-xs text-gray-500">Date: <%= new Date(order.createdAt).toLocaleDateString() %></p>
+                  </li>
+                <% }); %>
+              </ul>
+            <% } else { %>
+              <p class="text-gray-500">No recent orders.</p>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a href="/admin/sales-report" class="text-indigo-600 hover:text-indigo-800">
+              <i class="fas fa-file-download mr-2"></i> Generate Sales Report
+            </a>
+            <a href="/admin/categories" class="text-indigo-600 hover:text-indigo-800">
+              <i class="fas fa-folder-plus mr-2"></i> Manage Categories
+            </a>
+            <a href="/admin/coupons" class="text-indigo-600 hover:text-indigo-800">
+              <i class="fas fa-tags mr-2"></i> Manage Coupons
+            </a>
+            <a href="/admin/customers" class="text-indigo-600 hover:text-indigo-800">
+              <i class="fas fa-users mr-2"></i> View Customers
+            </a>
+          </div>
+        </div>
+      </div>
       </div>
 
     </div>
 
+    <script>
+      let salesTrendChartInstance;
 
+      document.addEventListener('DOMContentLoaded', function () {
+        // --- Sales Trend Line Chart ---
+        const salesTrendCtx = document.getElementById('salesTrendChart');
+        if (salesTrendCtx) {
+          const trendLabels = JSON.parse(`<%- salesTrendLabels %>`);
+          const trendData = JSON.parse(`<%- salesTrendData %>`);
 
+          if (salesTrendChartInstance) {
+            salesTrendChartInstance.destroy();
+          }
+          salesTrendChartInstance = new Chart(salesTrendCtx, {
+            type: 'line',
+            data: {
+              labels: trendLabels,
+              datasets: [{
+                label: 'Sales',
+                data: trendData,
+                borderColor: 'rgb(79, 70, 229)', // Indigo
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                tension: 0.1,
+                fill: true
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function(value) { return '₹' + value.toLocaleString('en-IN'); }
+                  }
+                }
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      let label = context.dataset.label || '';
+                      if (label) { label += ': '; }
+                      if (context.parsed.y !== null) {
+                        label += '₹' + context.parsed.y.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      }
+                      return label;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Category doughnut chart has been removed
+      });
+    </script>
   </body>
 </html>

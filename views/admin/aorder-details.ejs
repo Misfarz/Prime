@@ -106,6 +106,8 @@
                   <span class="text-gray-600">Payment Status:</span>
                   <% 
                     let paymentStatusClass = '';
+                    let paymentStatusText = order.paymentStatus;
+                    
                     switch(order.paymentStatus) {
                       case 'Paid':
                         paymentStatusClass = 'bg-green-100 text-green-800';
@@ -118,13 +120,16 @@
                         break;
                       case 'Refunded':
                         paymentStatusClass = 'bg-blue-100 text-blue-800';
+                        if (order.paymentMethod === 'wallet' || (order.orderStatus === 'Returned' && order.returnStatus === 'Approved') || order.orderStatus === 'Cancelled') {
+                          paymentStatusText = 'Refunded to Wallet';
+                        }
                         break;
                       default:
                         paymentStatusClass = 'bg-gray-100 text-gray-800';
                     }
                   %>
                   <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= paymentStatusClass %>">
-                    <%= order.paymentStatus %>
+                    <%= paymentStatusText %>
                   </span>
                 </div>
                 <% if (order.cancelledAt) { %>
@@ -154,6 +159,26 @@
                     <div class="flex justify-between">
                       <span class="text-gray-600">Return Reason:</span>
                       <span><%= order.returnReason %></span>
+                    </div>
+                  <% } %>
+                  <% if (order.returnStatus) { %>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Return Status:</span>
+                      <span class="<%= order.returnStatus === 'Approved' ? 'text-green-600' : (order.returnStatus === 'Rejected' ? 'text-red-600' : 'text-yellow-600') %> font-medium">
+                        <%= order.returnStatus %>
+                      </span>
+                    </div>
+                  <% } %>
+                  <% if (order.returnImage && order.returnImage.length > 0) { %>
+                    <div class="mt-4 pt-3 border-t">
+                      <h3 class="text-gray-600 font-semibold mb-2">Customer's Uploaded Images:</h3>
+                      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <% order.returnImage.forEach(image => { %>
+                          <a href="/<%= image %>" target="_blank" class="block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                            <img src="/<%= image %>" alt="Return Image" class="w-full h-24 object-cover">
+                          </a>
+                        <% }); %>
+                      </div>
                     </div>
                   <% } %>
                 <% } %>
@@ -218,7 +243,7 @@
             <div class="bg-white p-6 rounded-lg shadow">
               <h2 class="text-lg font-semibold mb-4">Order Actions</h2>
               <div class="space-y-3">
-                <% if (order.orderStatus === 'Returned' && order.paymentStatus !== 'Refunded') { %>
+                <% if (order.orderStatus === 'Returned' && order.returnStatus === 'For Verification') { %>
                   <button 
                     onclick="verifyReturn('<%= order._id %>', 'approve')" 
                     class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center justify-center"
@@ -231,6 +256,25 @@
                   >
                     <i class="fas fa-times-circle mr-2"></i> Reject Return
                   </button>
+                <% } else if (order.orderStatus === 'Returned' && order.returnStatus) { %>
+                  <div class="p-4 rounded-lg <%= order.returnStatus === 'Approved' ? 'bg-green-100' : 'bg-red-100' %>">
+                    <div class="flex items-center">
+                      <i class="<%= order.returnStatus === 'Approved' ? 'fas fa-check-circle text-green-500' : 'fas fa-times-circle text-red-500' %> text-xl mr-2"></i>
+                      <div>
+                        <p class="font-medium">Return Request <%= order.returnStatus %></p>
+                        <% if (order.returnStatus === 'Approved') { %>
+                          <p class="text-sm text-gray-600">Amount refunded to customer's wallet</p>
+                          <% if (order.paymentStatus === 'Refunded') { %>
+                            <p class="text-sm text-green-600 font-medium mt-1">
+                              <i class="fas fa-check-circle mr-1"></i> ₹<%= order.total.toFixed(2) %> successfully credited to wallet
+                            </p>
+                          <% } %>
+                        <% } else { %>
+                          <p class="text-sm text-gray-600">Return request was rejected</p>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
                 <% } %>
                 <% if (order.invoiceUrl) { %>
                   <a 

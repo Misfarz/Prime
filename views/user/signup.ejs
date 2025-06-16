@@ -1,196 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/jpeg" href="/images/Prime..jpg" />
-  <title>Prime.</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="/images/Prime..jpg">
+  <title>Sign Up - Prime</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      color: #6b7280;
+      font-size: 0.75rem;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid #374151;
+    }
+    .auth-divider::before {
+      margin-right: 0.5rem;
+    }
+    .auth-divider::after {
+      margin-left: 0.5rem;
+    }
+    .auth-container {
+      background-color: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+    }
+  </style>
 </head>
-<body class="h-screen w-screen flex bg-black text-white">
-
-  <div class="hidden md:block w-1/2 h-full bg-cover bg-center" style="background-image: url('your-image-path.jpg');">
-    <div class="h-full w-full bg-black bg-opacity-40 flex items-start p-10">
-      <h1 class="text-white text-4xl font-bold">Prime.</h1>
+<body class="min-h-screen flex items-center justify-center p-4 text-white" style="background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1064&q=80'); background-size: cover; background-position: center;">
+  <div class="w-full max-w-md rounded-lg p-8 auth-container">
+    <!-- Logo -->
+    <div class="mb-6 text-center">
+      <h1 class="text-3xl font-bold">Prime.</h1>
     </div>
-  </div>
 
-
-
-  <div class="w-full md:w-1/2 h-full flex items-center justify-center p-6">
-    <form id="signupForm" class="w-full max-w-md space-y-4" method="post" action="/signupaction" novalidate>
-      <div>
-        <h2 class="text-xl font-semibold mb-2">Create an Account</h2>
-        <p class="text-sm text-gray-300">Join us by filling in the information below</p>
-        <% if (message) { %>
-            <p class="text-red-500 text-xs mt-1"><%= message %></p>
-        <% } %>
-          
+    <!-- Error Message -->
+    <% if (message) { %>
+      <div class="mb-4 p-3 text-sm text-red-400 bg-red-900 bg-opacity-50 rounded">
+        <%= message %>
       </div>
+    <% } %>
 
-      <div class="space-y-1">
-        <label for="name" class="text-sm font-medium">NAME <span class="text-red-500">*</span></label>
-        <input type="text" id="name" placeholder="Full Name" name="name" 
-               class="w-full p-3 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               required 
-               minlength="2"
-               maxlength="50"
-               pattern="^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$" />
+    <!-- Signup Form -->
+    <form id="signupForm" class="space-y-4" method="post" action="/signupaction" novalidate>
+      <div>
+        <label for="name" class="block text-sm font-medium mb-1 text-gray-400">Full name</label>
+        <input 
+          type="text" 
+          id="name" 
+          placeholder="John Doe" 
+          name="name" 
+          class="w-full px-4 py-3 text-sm bg-gray-900 bg-opacity-70 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-gray-500" 
+          required 
+          minlength="2"
+          maxlength="50"
+          pattern="^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$"
+        >
         <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Please enter a valid name (2-50 characters)</div>
       </div>
 
-      <div class="space-y-1">
-        <label for="email" class="text-sm font-medium">EMAIL <span class="text-red-500">*</span></label>
-        <input type="email" id="email" placeholder="Email" name="email" 
-               class="w-full p-3 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               required />
+      <div>
+        <label for="email" class="block text-sm font-medium mb-1 text-gray-400">Email</label>
+        <input 
+          type="email" 
+          id="email" 
+          placeholder="you@example.com" 
+          name="email" 
+          class="w-full px-4 py-3 text-sm bg-gray-900 bg-opacity-70 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-gray-500" 
+          required
+        >
         <div id="emailError" class="text-red-500 text-xs mt-1 hidden">Please enter a valid email address</div>
       </div>
 
-      <div class="space-y-1">
-        <label for="password" class="text-sm font-medium">PASSWORD <span class="text-red-500">*</span></label>
-        <input type="password" id="password" placeholder="Password" name="password" 
-               class="w-full p-3 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               required 
-               minlength="8"
-               pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" />
+      <div>
+        <label for="password" class="block text-sm font-medium mb-1 text-gray-400">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          placeholder="••••••••" 
+          name="password" 
+          class="w-full px-4 py-3 text-sm bg-gray-900 bg-opacity-70 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-gray-500" 
+          required 
+          minlength="8"
+          pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+        >
         <div id="passwordError" class="text-red-500 text-xs mt-1 hidden">
-          Password must be at least 8 characters with uppercase, lowercase, number, and special character
+          Must be 8+ chars with uppercase, lowercase, number & special char
         </div>
       </div>
 
-      <div class="space-y-1">
-        <label for="confirmPassword" class="text-sm font-medium">CONFIRM PASSWORD <span class="text-red-500">*</span></label>
-        <input type="password" name="cPassword"  id="confirmPassword" placeholder="Confirm Password" 
-               class="w-full p-3 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               required />
+      <div>
+        <label for="confirmPassword" class="block text-sm font-medium mb-1 text-gray-400">Confirm password</label>
+        <input 
+          type="password" 
+          name="cPassword"  
+          id="confirmPassword" 
+          placeholder="••••••••" 
+          class="w-full px-4 py-3 text-sm bg-gray-900 bg-opacity-70 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-gray-500" 
+          required
+        >
         <div id="confirmPasswordError" class="text-red-500 text-xs mt-1 hidden">Passwords do not match</div>
       </div>
 
-      <button type="submit" class="w-full bg-white text-black font-semibold py-3 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        SIGN UP
+      <div>
+        <label for="referalCode" class="block text-sm font-medium mb-1 text-gray-400">Referral code <span class="text-gray-500">(optional)</span></label>
+        <input 
+          type="text" 
+          id="referalCode" 
+          placeholder="Enter referral code" 
+          name="referalCode" 
+          class="w-full px-4 py-3 text-sm bg-gray-900 bg-opacity-70 border border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-gray-500"
+        >
+        <div class="text-gray-500 text-xs mt-1">Get ₹70 credit with a referral code</div>
+      </div>
+
+      <button 
+        type="submit" 
+        class="w-full py-3 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+      >
+        Create Account
       </button>
 
-      <div class="text-xs text-gray-400">
-        By signing up, I confirm that I have read and accept the
-        <a href="#" class="underline hover:text-gray-300">Terms and Conditions</a> and the
-        <a href="#" class="underline hover:text-gray-300">Privacy Policy</a>.
+      <div class="text-xs text-gray-500 text-center">
+        By signing up, you agree to our 
+        <a href="#" class="text-blue-500 hover:text-blue-400">Terms</a> and 
+        <a href="#" class="text-blue-500 hover:text-blue-400">Privacy Policy</a>
       </div>
 
-      <div class="text-sm text-center">
-        Already have an account?
-        <a href="/login" class="underline hover:text-gray-300">Login here</a>
+      <!-- Divider -->
+      <div class="my-4 auth-divider">
+        <span>or</span>
       </div>
 
-      <div class="mt-4">
-        <a href="/auth/google/signup" type="button" class="w-full border border-white py-2 rounded hover:bg-white hover:text-black flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt="Google" />
-          Sign up with Google
+      <!-- Social Signup -->
+      <div class="space-y-3">
+        <a 
+          href="/auth/google/signup" 
+          class="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm border border-gray-700 rounded hover:bg-gray-900 hover:bg-opacity-50 transition-colors"
+        >
+          <img src="https://www.google.com/favicon.ico" class="w-4 h-4" alt="Google">
+          Continue with Google
         </a>
+      </div>
+
+      <div class="text-sm text-center text-gray-400">
+        Already have an account? 
+        <a href="/login" class="text-blue-500 hover:text-blue-400">Log in</a>
       </div>
     </form>
   </div>
-</body>
-</html>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('signupForm');
-  const nameInput = document.getElementById('name');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const confirmPasswordInput = document.getElementById('confirmPassword');
-  
-  const nameError = document.getElementById('nameError');
-  const emailError = document.getElementById('emailError');
-  const passwordError = document.getElementById('passwordError');
-  const confirmPasswordError = document.getElementById('confirmPasswordError');
-
-  nameInput.addEventListener('input', validateName);
-  emailInput.addEventListener('input', validateEmail);
-  passwordInput.addEventListener('input', validatePassword);
-  confirmPasswordInput.addEventListener('input', validateConfirmPassword);
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('signupForm');
+    const nameInput = document.getElementById('name');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
     
-    const isNameValid = validateName();
-    const isEmailValid = validateEmail();
-    const isPasswordValid = validatePassword();
-    const isConfirmPasswordValid = validateConfirmPassword();
-    
-    if (isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid) {
-      form.submit();
+    const nameError = document.getElementById('nameError');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    const confirmPasswordError = document.getElementById('confirmPasswordError');
+
+    nameInput.addEventListener('input', validateName);
+    emailInput.addEventListener('input', validateEmail);
+    passwordInput.addEventListener('input', validatePassword);
+    confirmPasswordInput.addEventListener('input', validateConfirmPassword);
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const isNameValid = validateName();
+      const isEmailValid = validateEmail();
+      const isPasswordValid = validatePassword();
+      const isConfirmPasswordValid = validateConfirmPassword();
+      
+      if (isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid) {
+        form.submit();
+      }
+    });
+
+    function validateName() {
+      const name = nameInput.value.trim();
+      const isValid = name.length >= 2 && name.length <= 50 && /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/.test(name);
+      
+      toggleError(nameInput, nameError, isValid);
+      return isValid;
+    }
+
+    function validateEmail() {
+      const email = emailInput.value.trim();
+      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      
+      toggleError(emailInput, emailError, isValid);
+      return isValid;
+    }
+
+    function validatePassword() {
+      const password = passwordInput.value;
+      const isValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
+      
+      toggleError(passwordInput, passwordError, isValid);
+      return isValid;
+    }
+
+    function validateConfirmPassword() {
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+      const isValid = password === confirmPassword && password !== '';
+      
+      toggleError(confirmPasswordInput, confirmPasswordError, isValid);
+      return isValid;
+    }
+
+    function toggleError(input, errorElement, isValid) {
+      if (!isValid) {
+        errorElement.classList.remove('hidden');
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+      } else {
+        errorElement.classList.add('hidden');
+        input.classList.remove('border-red-500');
+        input.classList.add('border-green-500');
+      }
     }
   });
-
-  function validateName() {
-    const name = nameInput.value.trim();
-    const isValid = name.length >= 2 && name.length <= 50 && /^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$/.test(name);
-    
-    if (!isValid) {
-      nameError.classList.remove('hidden');
-      nameInput.classList.add('border-red-500');
-      nameInput.classList.remove('border-green-500');
-    } else {
-      nameError.classList.add('hidden');
-      nameInput.classList.remove('border-red-500');
-      nameInput.classList.add('border-green-500');
-    }
-    
-    return isValid;
-  }
-
-  function validateEmail() {
-    const email = emailInput.value.trim();
-    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    
-    if (!isValid) {
-      emailError.classList.remove('hidden');
-      emailInput.classList.add('border-red-500');
-      emailInput.classList.remove('border-green-500');
-    } else {
-      emailError.classList.add('hidden');
-      emailInput.classList.remove('border-red-500');
-      emailInput.classList.add('border-green-500');
-    }
-    
-    return isValid;
-  }
-
-  function validatePassword() {
-    const password = passwordInput.value;
-    const isValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
-    
-    if (!isValid) {
-      passwordError.classList.remove('hidden');
-      passwordInput.classList.add('border-red-500');
-      passwordInput.classList.remove('border-green-500');
-    } else {
-      passwordError.classList.add('hidden');
-      passwordInput.classList.remove('border-red-500');
-      passwordInput.classList.add('border-green-500');
-    }
-    
-    return isValid;
-  }
-
-  function validateConfirmPassword() {
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-    const isValid = password === confirmPassword && password !== '';
-    
-    if (!isValid) {
-      confirmPasswordError.classList.remove('hidden');
-      confirmPasswordInput.classList.add('border-red-500');
-      confirmPasswordInput.classList.remove('border-green-500');
-    } else {
-      confirmPasswordError.classList.add('hidden');
-      confirmPasswordInput.classList.remove('border-red-500');
-      confirmPasswordInput.classList.add('border-green-500');
-    }
-    
-    return isValid;
-  }
-});
-</script>
+  </script>
+</body>
+</html>

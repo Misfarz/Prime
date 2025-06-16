@@ -86,14 +86,24 @@
             <div class="flex justify-between items-center mb-4">
               <h2 class="text-sm font-semibold">Category List</h2>
               <div class="flex space-x-4">
-                <div class="relative">
-                  <input type="text" id="search" placeholder="Search categories..."
-                    class="pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
-                    onkeyup="filterCategories()">
-                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-500"></i>
+                <form action="/admin/categories" method="GET" class="flex items-center space-x-2">
+                  <div class="relative">
+                    <input type="text" name="search" id="search" placeholder="Search categories..."
+                      class="pl-8 pr-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                      value="<%= typeof search !== 'undefined' ? search : '' %>">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <i class="fas fa-search text-gray-500"></i>
+                    </div>
                   </div>
-                </div>
+                  <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+                    Search
+                  </button>
+                  <% if (typeof search !== 'undefined' && search) { %>
+                    <a href="/admin/categories" class="text-gray-600 hover:text-gray-800">
+                      <i class="fas fa-times-circle"></i> Clear
+                    </a>
+                  <% } %>
+                </form>
                 <button onclick="openAddCategoryModal()"
                   class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
                   Add Category
@@ -261,22 +271,7 @@
       });
 
     
-      function filterCategories() {
-        let input = document.getElementById("search").value.toLowerCase();
-        let rows = document.querySelectorAll(".category-row");
-
-        rows.forEach(row => {
-          let name = row.querySelector("td:nth-child(1)").textContent.toLowerCase();
-          let subcategories = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
-          let description = row.querySelector("td:nth-child(3)").textContent.toLowerCase();
-
-          if (name.includes(input) || subcategories.includes(input) || description.includes(input)) {
-            row.style.display = "table-row";
-          } else {
-            row.style.display = "none";
-          }
-        });
-      }
+      // Backend search is now used instead of client-side filtering
 
     
       let cropper;

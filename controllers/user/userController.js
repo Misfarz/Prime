@@ -1605,7 +1605,8 @@ const verifyResetOTP = async (req, res) => {
     console.log("=== OTP Verification Debug Info ===");
     console.log("1. Raw Request Body:", JSON.stringify(req.body));
 
-    const rawEmail = req.body.email;
+    // Handle cases where duplicate email fields result in an array
+    const rawEmail = Array.isArray(req.body.email) ? req.body.email[0] : req.body.email;
     const rawOtp = req.body.otp;
 
     console.log("2. Raw Values:");

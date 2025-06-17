@@ -5,6 +5,7 @@ const User = require("../../models/userSchema");
 const Product = require("../../models/productSchema");
 const { Category } = require("../../models/categorySchema");
 const WalletTransaction = require("../../models/walletTransactionSchema");
+const Order = require("../../models/orderSchema");
 require("dotenv").config();
 
 const loadVerifyOTP = (req, res) => {
@@ -1848,6 +1849,112 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Load Best Sellers Page
+const loadBestSellers = async (req, res) => {
+  try {
+    const sort = req.query.sort || "alphabetical-asc";
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const skip = (page - 1) * limit;
+    // Prepare user object with wishlist/cart similar to homepage
+    let user = req.session.user;
+    if (user && user._id) {
+      user = await User.findById(user._id)
+        .populate("whishlist")
+        .populate({
+          path: "cart",
+          populate: {
+            path: "items.product",
+          },
+        });
+
+      // cart count indicator
+      if (user.cart && user.cart.items) {
+        req.session.user.cartCount = user.cart.items.length;
+      } else {
+        req.session.user.cartCount = 0;
+      }
+
+      req.session.user = user;
+    }
+
+        // Aggregate orders to find top selling products
+    const topProductsAgg = await Order.aggregate([
+      { $unwind: "$items" },
+      // Exclude cancelled/returned quantities
+      {
+        $match: {
+          orderStatus: { $nin: ["Cancelled", "Returned", "Partially Cancelled", "Partially Returned"] },
+        },
+      },
+      {
+        $group: {
+          _id: "$items.product",
+          totalSold: { $sum: "$items.quantity" },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: 40 },
+    ]);
+
+    const productIds = topProductsAgg.map((p) => p._id);
+
+    // Fetch product details in the same order
+    const productsMap = await Product.find({ _id: { $in: productIds }, isListed: true })
+      .populate("category")
+      .lean();
+
+    // Maintain ranking order
+        // Compose products array keeping original popularity order
+    let products = productIds.map((id) => productsMap.find((p) => p._id.toString() === id.toString())).filter(Boolean);
+
+    // Helper to calculate effectivePrice similar to shopall logic
+    const getEffectivePrice = (p) => {
+      let offerPercent = 0;
+      if (p.productOffer) offerPercent = p.productOffer;
+      if (p.category && p.category.categoryOffer && p.category.categoryOffer > offerPercent) {
+        offerPercent = p.category.categoryOffer;
+      }
+      if (p.salePrice != null) return p.salePrice;
+      if (offerPercent > 0) return p.regularPrice - (p.regularPrice * offerPercent) / 100;
+      return p.regularPrice;
+    };
+
+    // Apply sort
+    switch (sort) {
+      case "low-to-high":
+        products.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+        break;
+      case "high-to-low":
+        products.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+        break;
+      case "alphabetical-desc":
+        products.sort((a, b) => b.productName.localeCompare(a.productName));
+        break;
+      case "alphabetical-asc":
+      default:
+        products.sort((a, b) => a.productName.localeCompare(b.productName));
+        break;
+    }
+
+    const total = products.length;
+    const totalPages = Math.ceil(total / limit);
+
+    products = products.slice(skip, skip + limit);
+
+    return res.render("bestsellers", {
+      user: user || null,
+      products,
+      currentPage: page,
+      totalPages,
+      sort,
+    });
+  } catch (error) {
+    console.error("Best Sellers page error:", error);
+    return res.status(500).render("page-404", { message: "Server Error" });
+  }
+};
+
 module.exports = {
   loadHomepage,
   loadLogin,
@@ -1870,4 +1977,6 @@ module.exports = {
   loadFootball,
   loadCricket,
   loadBasketball,
+  loadBestSellers,
 };
+

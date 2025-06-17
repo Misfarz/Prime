@@ -107,6 +107,7 @@ router.get('/login', userController.loadLogin);
   router.get('/verifyOTP', userController.loadVerifyOTP); 
   router.get('/pageNotFound', userController.loadPageNotFound);
   router.get('/shopall', userController.loadShopAll);
+router.get('/bestsellers', userController.loadBestSellers);
   router.get('/product/:id', userController.loadProductDetail);
   router.get('/football', userController.loadFootball);
   router.get('/cricket',userController.loadCricket)

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prime Jersey - Best Sellers</title>
+  <meta name="description" content="Discover the most popular jerseys loved by our customers at Prime Jersey." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <style>
+    body {font-family: 'Inter', sans-serif;scroll-behavior: smooth;background-color: #fafafa;}
+    .product-card {background-color: white;border-radius: 0;overflow: hidden;transition: transform 0.2s ease, box-shadow 0.2s ease;display: flex;flex-direction: column;height: 100%;border: 1px solid #f0f0f0;}
+    .product-card:hover {transform: translateY(-2px);box-shadow: 0 2px 8px rgba(0,0,0,0.05);}    
+    .sale-badge {position: absolute;top: 12px;right: 12px;background-color: #000;color: white;padding: 2px 8px;font-size: 11px;font-weight: 500;letter-spacing: .5px;z-index: 10;}
+    .product-image-container {position: relative;padding-top: 120%;background-color: #f8f8f8;}
+    .wishlist-btn {position: absolute;top: 12px;left: 12px;z-index: 10;background-color: white;border-radius: 50%;width: 32px;height: 32px;display: flex;align-items: center;justify-content: center;box-shadow: 0 2px 5px rgba(0,0,0,0.1);transition: all 0.2s ease;}
+    .wishlist-btn:hover {transform: scale(1.1);}    
+    .wishlist-btn.active i {color: #ef4444;}
+    .product-image {position: absolute;top: 0;left: 0;width: 100%;height: 100%;object-fit: cover;transition: opacity .3s ease;}
+  </style>
+</head>
+<body class="text-gray-900">
+  <%- include("../../views/partials/user/header") %>
+
+  <div class="bg-white border-b">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center text-sm text-gray-500">
+        <a href="/" class="hover:text-blue-600 transition">Home</a>
+        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+        <span class="text-gray-800 font-medium">Best Sellers</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="py-16 bg-[#fafafa]">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h1 class="text-3xl font-light mb-3 tracking-tight">Best Sellers</h1>
+        <p class="text-gray-500 max-w-2xl mx-auto">Our most popular jerseys chosen by fans like you</p>
+      </div>
+
+      <!-- Sort Bar -->
+      <div class="flex justify-end mb-6">
+        <form id="sortForm" action="/bestsellers" method="GET" class="flex items-center gap-2">
+          <input type="hidden" name="page" value="1" />
+          <label for="sort" class="text-sm text-gray-600">Sort:</label>
+          <select name="sort" id="sort" onchange="document.getElementById('sortForm').submit()" class="border-gray-300 rounded-md text-sm">
+            <option value="alphabetical-asc" <%= sort === 'alphabetical-asc' ? 'selected' : '' %>>A - Z</option>
+            <option value="alphabetical-desc" <%= sort === 'alphabetical-desc' ? 'selected' : '' %>>Z - A</option>
+            <option value="low-to-high" <%= sort === 'low-to-high' ? 'selected' : '' %>>Price: Low to High</option>
+            <option value="high-to-low" <%= sort === 'high-to-low' ? 'selected' : '' %>>Price: High to Low</option>
+          </select>
+        </form>
+      </div>
+      <!-- Product Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
+        <% if (products && products.length > 0) { %>
+          <% products.forEach(product => { %>
+            <div class="product-card relative">
+              <button class="wishlist-btn" data-product-id="<%= product._id %>" onclick="event.preventDefault(); toggleWishlist(this, '<%= product._id %>')">
+                <i class="<%= user && user.whishlist && user.whishlist.includes(product._id.toString()) ? 'fas text-red-500' : 'far' %> fa-heart text-sm"></i>
+              </button>
+              <a href="/product/<%= product._id %>" class="group block" aria-label="<%= product.productName %>">
+                <% let appliedOffer = 0;
+                   if (product.productOffer && product.productOffer > 0) appliedOffer = product.productOffer;
+                   if (product.category && product.category.categoryOffer && product.category.categoryOffer > appliedOffer) appliedOffer = product.category.categoryOffer;
+                   if (appliedOffer > 0) { %>
+                  <div class="sale-badge"><%= appliedOffer %>% OFF</div>
+                <% } %>
+                <div class="product-image-container">
+                  <img src="<%= product.productImage[0] %>" alt="<%= product.productName %>" class="product-image" />
+                </div>
+                <div class="p-4 flex flex-col flex-grow">
+                  <h3 class="text-sm font-medium mb-1"><%= product.productName %></h3>
+                  <p class="text-xs text-gray-500 mb-2 line-clamp-2"><%= product.description %></p>
+                  <div class="mt-auto">
+                    <% if (product.salePrice) { %>
+                      <span class="text-sm font-semibold text-red-600 mr-2">₹<%= product.salePrice %></span>
+                      <span class="text-xs line-through text-gray-400">₹<%= product.regularPrice %></span>
+                    <% } else { %>
+                      <span class="text-sm font-semibold text-gray-900">₹<%= product.regularPrice %></span>
+                    <% } %>
+                  </div>
+                </div>
+              </a>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="col-span-full text-center text-gray-500">No best sellers available at the moment.</div>
+        <% } %>
+      </div>
+
+      <% if (totalPages > 1) { %>
+      <div class="mt-16 flex justify-center">
+        <div class="inline-flex rounded-md shadow-sm">
+          <% if (currentPage > 1) { %>
+            <a href="/bestsellers?page=<%= currentPage - 1 %>&sort=<%= sort %>" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
+              <i class="fas fa-chevron-left mr-1"></i> Previous
+            </a>
+          <% } else { %>
+            <span class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-50 border border-gray-300 rounded-l-md cursor-not-allowed"><i class="fas fa-chevron-left mr-1"></i> Previous</span>
+          <% } %>
+
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <% if (i === currentPage) { %>
+              <span class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600"><%= i %></span>
+            <% } else { %>
+              <a href="/bestsellers?page=<%= i %>&sort=<%= sort %>" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"><%= i %></a>
+            <% } %>
+          <% } %>
+
+          <% if (currentPage < totalPages) { %>
+            <a href="/bestsellers?page=<%= currentPage + 1 %>&sort=<%= sort %>" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
+              Next <i class="fas fa-chevron-right ml-1"></i>
+            </a>
+          <% } else { %>
+            <span class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-50 border border-gray-300 rounded-r-md cursor-not-allowed">Next <i class="fas fa-chevron-right ml-1"></i></span>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+
+    </div>
+  </section>
+
+  <%- include("../../views/partials/user/footer") %>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const descriptions = document.querySelectorAll('.line-clamp-2');
+      descriptions.forEach(desc => {
+        if (desc.scrollHeight > desc.clientHeight) {
+          desc.classList.add('truncate-description');
+        }
+      });
+    });
+  </script>
+  <script src="/js/wishlist.js"></script>
+  <script>
+    window.userWishlist = JSON.parse('<%= JSON.stringify(user && user.whishlist ? user.whishlist.map(item => item.toString()) : []) %>');
+  </script>
+  <script src="/js/add-wishlist-buttons.js"></script>
+</body>
+</html>

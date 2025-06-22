@@ -8,51 +8,8 @@ const productController = require('../controllers/admin/productController');
 const orderController = require('../controllers/admin/orderController');
 const couponController = require('../controllers/admin/couponController');
 const dashboardController = require('../controllers/admin/dashboardController');
-const multer = require('multer');
+const { uploadCategory, uploadProduct } = require('../middleware/multerConfig');
 const path = require('path');
-
-const categoryStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/uploads/categories');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
-
-const productStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'public/uploads/products');
-    },
-    filename: (req, file, cb) => {
-        // Create a truly unique filename with original name, timestamp, and random string
-        const uniquePrefix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-        const originalExt = path.extname(file.originalname);
-        cb(null, `${uniquePrefix}-${file.fieldname}${originalExt}`);
-    }
-});
-
-const fileFilter = (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-    if (extname && mimetype) {
-        return cb(null, true);
-    }
-    cb('Error: Images only!');
-};
-
-const uploadCategory = multer({
-    storage: categoryStorage,
-    fileFilter
-});
-
-const uploadProduct = multer({
-    storage: productStorage,
-    fileFilter
-});
-
 
 router.get('/login', adminController.loadLogin);
 router.get('/pageerror', adminController.loadPageError);

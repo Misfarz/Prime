@@ -137,6 +137,28 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <% if (totalPages && totalPages > 1) { %>
+            <div class="flex justify-center mt-6">
+              <nav class="inline-flex shadow-sm -space-x-px" aria-label="Pagination">
+                <!-- Previous -->
+                <% const prevPage = page - 1; %>
+                <a href="/admin/coupons?<%= prevPage > 0 ? `page=${prevPage}` : `page=1` %>" class="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium <%= prevPage < 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50' %>">
+                  Previous
+                </a>
+                <!-- Page Numbers -->
+                <% for(let i = 1; i <= totalPages; i++) { %>
+                  <a href="/admin/coupons?page=<%= i %>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium <%= i === page ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50' %>"><%= i %></a>
+                <% } %>
+                <!-- Next -->
+                <% const nextPage = page + 1; %>
+                <a href="/admin/coupons?<%= nextPage <= totalPages ? `page=${nextPage}` : `page=${totalPages}` %>" class="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium <%= nextPage > totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50' %>">
+                  Next
+                </a>
+              </nav>
+            </div>
+            <% } %>
         </main>
     </div>
 </div>

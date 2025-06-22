@@ -18,9 +18,7 @@ async function incrementCouponUsage(couponId) {
   });
 }
 
-/**
- * Compute cart calculations (subtotal, discount, shipping)
- */
+
 function calculateCart(cartItems) {
   return cartItems.reduce(
     (acc, item) => {
@@ -49,12 +47,12 @@ const proceedPayment = async (req, res, next) => {
     const user = await User.findById(userId);
     if (!user) return res.redirect('/login');
 
-    // Persist chosen address id to session (comes from checkout page)
+
     if (req.body.addressId) {
       req.session.selectedAddressId = req.body.addressId;
     }
 
-    // Fetch cart items
+  
     const cart = await Cart.findOne({ user: userId }).populate({
       path: 'items.product',
       populate: { path: 'category' },
@@ -65,7 +63,7 @@ const proceedPayment = async (req, res, next) => {
 
     const { subtotal, discountAmount } = calculateCart(cart.items);
 
-    // Shipping & tax consistent with checkout calculations
+   
     const shipping = 50;
     const tax = Math.round(subtotal * 0.05);
     const couponDiscount = cart.coupon?.discount || 0;
@@ -140,7 +138,6 @@ const choosePayment = async (req, res) => {
       };
     });
 
-    // Handle according to payment method
     if (paymentMethod === 'cod') {
       const order = new Order({
         user: userId,

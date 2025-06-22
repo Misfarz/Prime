@@ -15,8 +15,7 @@
       scroll-behavior: smooth;
       background-color: #fafafa;
     }
-    
-    /* Consistent Product Cards */
+  
     .product-card {
       background-color: white;
       border-radius: 0;
@@ -406,20 +405,10 @@
                   <p class="text-sm text-gray-500 line-clamp-2 mb-3"><%= product.description %></p>
                   <div class="flex justify-between items-center mt-auto">
                     <div>
-                      <% 
-                        // Calculate the discounted price based on the appropriate base price
-                        if (appliedOffer > 0) {
-                          // Use sale price as base price if available, otherwise use regular price
-                          const basePrice = product.salePrice && product.salePrice < product.regularPrice ? product.salePrice : product.regularPrice;
-                          const finalPrice = Math.round(basePrice * (1 - appliedOffer/100));
-                      %>
-                        <span class="text-sm font-medium text-gray-900">₹<%= finalPrice %></span>
-                        <span class="text-xs text-gray-400 line-through ml-2">₹<%= basePrice %></span>
-                      <% } else if (product.salePrice && product.salePrice < product.regularPrice) { %>
-                        <!-- Show only sale price when no offer is applied -->
+                      <% if (product.salePrice && product.salePrice < product.regularPrice) { %>
                         <span class="text-sm font-medium text-gray-900">₹<%= product.salePrice %></span>
+                        <span class="text-xs text-gray-400 line-through ml-2">₹<%= product.regularPrice %></span>
                       <% } else { %>
-                        <!-- Show regular price when no offers or sale price -->
                         <span class="text-sm font-medium text-gray-900">₹<%= product.regularPrice %></span>
                       <% } %>
                     </div>
@@ -453,7 +442,7 @@
       <div class="mt-16 flex justify-center">
         <div class="inline-flex rounded-md shadow-sm">
           <% if (currentPage > 1) { %>
-            <a href="/shopall?page=<%= currentPage - 1 %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %>" 
+            <a href="/shopall?page=<%= currentPage - 1 %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %><%= categoryId ? '&category=' + categoryId : '' %><%= subcategory ? '&subcategory=' + subcategory : '' %><%= minPrice ? '&minPrice=' + minPrice : '' %><%= maxPrice ? '&maxPrice=' + maxPrice : '' %>" 
                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
               <i class="fas fa-chevron-left mr-1"></i> Previous
             </a>
@@ -469,7 +458,7 @@
                 <%= i %>
               </span>
             <% } else { %>
-              <a href="/shopall?page=<%= i %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %>" 
+              <a href="/shopall?page=<%= i %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %><%= categoryId ? '&category=' + categoryId : '' %><%= subcategory ? '&subcategory=' + subcategory : '' %><%= minPrice ? '&minPrice=' + minPrice : '' %><%= maxPrice ? '&maxPrice=' + maxPrice : '' %>" 
                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <%= i %>
               </a>
@@ -477,7 +466,7 @@
           <% } %>
           
           <% if (currentPage < totalPages) { %>
-            <a href="/shopall?page=<%= currentPage + 1 %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %>" 
+            <a href="/shopall?page=<%= currentPage + 1 %><%= sort ? '&sort=' + sort : '' %><%= search ? '&search=' + search : '' %><%= categoryId ? '&category=' + categoryId : '' %><%= subcategory ? '&subcategory=' + subcategory : '' %><%= minPrice ? '&minPrice=' + minPrice : '' %><%= maxPrice ? '&maxPrice=' + maxPrice : '' %>" 
                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
               Next <i class="fas fa-chevron-right ml-1"></i>
             </a>

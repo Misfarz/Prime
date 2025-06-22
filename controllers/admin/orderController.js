@@ -120,6 +120,14 @@ const updateOrderStatus = async (req, res) => {
 
     const order = await Order.findById(orderId);
 
+    // Prevent updating status once delivered (except keeping Delivered)
+    if (order && order.orderStatus === "Delivered" && status !== "Delivered") {
+      return res.status(400).json({
+        success: false,
+        message: "Order is already delivered and cannot be updated",
+      });
+    }
+
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -131,6 +139,10 @@ const updateOrderStatus = async (req, res) => {
 
     if (status === "Delivered") {
       order.deliveredAt = new Date();
+      // For COD orders, mark payment as paid upon delivery
+      if (order.paymentMethod === "cod" && order.paymentStatus === "Pending") {
+        order.paymentStatus = "Paid";
+      }
     }
 
     if (status === "Cancelled") {
@@ -201,6 +213,14 @@ const verifyReturnRequest = async (req, res) => {
     const { orderId, action } = req.body;
 
     const order = await Order.findById(orderId);
+
+    // Prevent updating status once delivered (except keeping Delivered)
+    if (order && order.orderStatus === "Delivered" && status !== "Delivered") {
+      return res.status(400).json({
+        success: false,
+        message: "Order is already delivered and cannot be updated",
+      });
+    }
 
     if (!order) {
       return res.status(404).json({

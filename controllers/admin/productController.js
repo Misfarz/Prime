@@ -29,7 +29,7 @@ const getProducts = async (req, res) => {
 
 const saveProduct = async (req, res) => {
   try {
-    const {
+    let {
       productId,
       productName,
       description,
@@ -44,6 +44,11 @@ const saveProduct = async (req, res) => {
       productOffer,
     } = req.body;
 
+    // Convert blank id to null to prevent CastError when querying by _id
+    if (productId === "") {
+      productId = null;
+    }
+
     if (
       !productName ||
       !description ||
@@ -54,10 +59,13 @@ const saveProduct = async (req, res) => {
       return res.status(400).send("Missing required fields");
     }
 
-    const existingProductName = await Product.findOne({
+    const duplicateFilter = {
       productName: { $regex: new RegExp(`^${productName}$`, "i") },
-      _id: { $ne: productId },
-    });
+    };
+    if (productId) {
+      duplicateFilter._id = { $ne: productId };
+    }
+    const existingProductName = await Product.findOne(duplicateFilter);
 
     if (existingProductName) {
       return res.status(400).send("Product already exists");
@@ -144,6 +152,9 @@ const saveProduct = async (req, res) => {
     console.log("isNew value:", isNew);
     console.log("isFeatured value:", isFeatured);
 
+    // Calculate highest applicable offer (product vs category)
+    const highestOffer = Math.max(productOffer ? parseFloat(productOffer) : 0, categoryDoc.categoryOffer || 0);
+
     const productData = {
       productName,
       description,
@@ -169,6 +180,16 @@ const saveProduct = async (req, res) => {
       }
     } else {
       product = new Product(productData);
+      await product.save();
+    }
+
+    // After product is saved/updated, if admin did NOT set a salePrice, derive one from offers
+    if (product.salePrice === null) {
+      const savedCategory = await Category.findById(product.category);
+      const effectiveOffer = Math.max(product.productOffer || 0, savedCategory?.categoryOffer || 0);
+      if (effectiveOffer > 0) {
+        product.salePrice = Math.round(product.regularPrice * (1 - effectiveOffer / 100));
+      }
       await product.save();
     }
 

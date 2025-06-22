@@ -151,13 +151,13 @@
                 <% order.items.forEach((item, index) => { %>
                     <div class="flex flex-col md:flex-row border border-gray-200 rounded-lg overflow-hidden">
                         <div class="w-full md:w-1/4 bg-gray-50 p-4 flex items-center justify-center">
-                            <img src="<%= item.product.productImage && item.product.productImage.length > 0 ? item.product.productImage[0] : '/images/product-placeholder.jpg' %>" 
-                                alt="<%= item.product.productName %>" 
+                            <img src="<%= item.product && item.product.productImage && item.product.productImage.length > 0 ? item.product.productImage[0] : '/images/product-placeholder.jpg' %>" 
+                                alt="<%= item.product ? item.product.productName : 'Product image' %>" 
                                 class="h-32 object-contain">
                         </div>
                         <div class="w-full md:w-3/4 p-4 flex flex-col md:flex-row justify-between">
                             <div>
-                                <h3 class="font-medium text-lg mb-1"><%= item.product.productName %></h3>
+                                <h3 class="font-medium text-lg mb-1"><%= item.product ? item.product.productName : 'Product name' %></h3>
                                 <p class="text-gray-600 mb-2">
                                     <% if (item.size) { %>Size: <%= item.size %><% } %>
                                     <% if (item.color) { %>, Color: <%= item.color %><% } %>
@@ -166,42 +166,6 @@
                                 <p class="text-gray-600">Price: ₹<%= item.price.toFixed(2) %></p>
                                 <p class="font-medium mt-2">Total: ₹<%= item.total.toFixed(2) %></p>
                                 
-                                <% 
-                                let itemStatusColor = '';
-                                switch(item.status) {
-                                    case 'Placed':
-                                        itemStatusColor = 'bg-blue-100 text-blue-800';
-                                        break;
-                                    case 'Processing':
-                                        itemStatusColor = 'bg-yellow-100 text-yellow-800';
-                                        break;
-                                    case 'Shipped':
-                                        itemStatusColor = 'bg-indigo-100 text-indigo-800';
-                                        break;
-                                    case 'Delivered':
-                                        itemStatusColor = 'bg-green-100 text-green-800';
-                                        break;
-                                    case 'Cancelled':
-                                        itemStatusColor = 'bg-red-100 text-red-800';
-                                        break;
-                                    case 'Returned':
-                                        itemStatusColor = 'bg-orange-100 text-orange-800';
-                                        break;
-                                    default:
-                                        itemStatusColor = 'bg-gray-100 text-gray-800';
-                                }
-                                %>
-                                <span class="inline-block mt-2 px-2 py-1 text-xs font-semibold rounded-full <%= itemStatusColor %>">
-                                    <%= item.status %>
-                                </span>
-                                
-                                <% if (item.cancelReason) { %>
-                                    <p class="text-red-600 text-sm mt-2">Cancellation reason: <%= item.cancelReason %></p>
-                                <% } %>
-                                
-                                <% if (item.returnReason) { %>
-                                    <p class="text-orange-600 text-sm mt-2">Return reason: <%= item.returnReason %></p>
-                                <% } %>
                             </div>
                             <div class="mt-4 md:mt-0 flex flex-col gap-2">
                                 <% if (item.status === 'Delivered') { %>

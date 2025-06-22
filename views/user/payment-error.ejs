@@ -23,7 +23,7 @@
                         <%= errorMessage || "We couldn't process your payment. Please try again or choose a different payment method." %>
                     </p>
                     
-                    <% if (orderId) { %>
+                    <% if (typeof orderId !== 'undefined' && orderId) { %>
                         <div class="text-sm text-gray-500 mb-6">
                             <p>Order Reference: <%= orderId %></p>
                             <% if (errorCode) { %>

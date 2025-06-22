@@ -128,7 +128,7 @@ const loadShopAll = async (req, res) => {
         sortOption = { salePrice: 1, regularPrice: 1 };
         break;
       case "high-to-low":
-        sortOption = { salePrice: -1, regularPrice: -1 };
+        sortOption = { salePrice:- 1, regularPrice: -1 };
         break;
       case "alphabetical-desc":
         sortOption = { productName: -1 };
@@ -219,63 +219,13 @@ const loadShopAll = async (req, res) => {
     const total = await Product.countDocuments(query);
 
     let products;
-    if (sort === "low-to-high" || sort === "high-to-low") {
-      const priceOrder = sort === "low-to-high" ? 1 : -1;
-      products = await Product.aggregate([
-        { $match: query },
-        {
-          $lookup: {
-            from: "categories",
-            localField: "category",
-            foreignField: "_id",
-            as: "category",
-          },
-        },
-        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-        {
-          $addFields: {
-            offerPercent: {
-              $max: [
-                { $ifNull: ["$productOffer", 0] },
-                { $ifNull: ["$category.categoryOffer", 0] },
-              ],
-            },
-            effectivePrice: {
-              $cond: [
-                { $gt: [{ $ifNull: ["$salePrice", null] }, null] },
-                "$salePrice",
-                {
-                  $cond: [
-                    { $gt: [{ $ifNull: ["$offerPercent", 0] }, 0] },
-                    {
-                      $subtract: [
-                        "$regularPrice",
-                        {
-                          $multiply: [
-                            "$regularPrice",
-                            { $divide: ["$offerPercent", 100] },
-                          ],
-                        },
-                      ],
-                    },
-                    "$regularPrice",
-                  ],
-                },
-              ],
-            },
-          },
-        },
-        { $sort: { effectivePrice: priceOrder } },
-        { $skip: skip },
-        { $limit: limit },
-      ]);
-    } else {
-      products = await Product.find(query)
+    
+   products = await Product.find(query)
         .populate("category", "name")
         .sort(sortOption)
         .skip(skip)
         .limit(limit);
-    }
+  
 
     const totalPages = Math.ceil(total / limit);
 
@@ -353,7 +303,6 @@ const loadShopAll = async (req, res) => {
     res.status(500).render("page-404", { message: "Server Error" });
   }
 };
-
 const loadLogin = async (req, res) => {
   try {
     if (!req.session.user) {
@@ -1252,6 +1201,7 @@ const loadCricket = async (req, res) => {
     res.status(500).render("page-404", { message: "Server Error" });
   }
 };
+
 const loadBasketball = async (req, res) => {
   try {
     const user = req.session.user;
@@ -1878,7 +1828,7 @@ const loadBestSellers = async (req, res) => {
       req.session.user = user;
     }
 
-        // Aggregate orders to find top selling products
+    // Aggregate orders to find top selling products
     const topProductsAgg = await Order.aggregate([
       { $unwind: "$items" },
       // Exclude cancelled/returned quantities
@@ -1905,7 +1855,7 @@ const loadBestSellers = async (req, res) => {
       .lean();
 
     // Maintain ranking order
-        // Compose products array keeping original popularity order
+    // Compose products array keeping original popularity order
     let products = productIds.map((id) => productsMap.find((p) => p._id.toString() === id.toString())).filter(Boolean);
 
     // Helper to calculate effectivePrice similar to shopall logic
@@ -1955,6 +1905,36 @@ const loadBestSellers = async (req, res) => {
   }
 };
 
+const getFilterModalContent = async (req, res) => {
+  try {
+    const { category } = req.query;
+    
+    // Get categories and subcategories if category is selected
+    const categories = await Category.find({}).lean();
+    let subcategories = [];
+    
+    if (category && mongoose.Types.ObjectId.isValid(category)) {
+      subcategories = await Product.distinct('subcategory', {
+        category: new mongoose.Types.ObjectId(category),
+        isListed: true,
+        subcategory: { $exists: true, $ne: '' }
+      });
+    }
+    
+    // Render just the modal content
+    res.render('partials/filter-modal-content', {
+      categories,
+      subcategories,
+      selectedCategory: category,
+      layout: false
+    });
+    
+  } catch (error) {
+    console.error('Error getting filter modal content:', error);
+    res.status(500).send('Error loading filter options');
+  }
+};
+
 module.exports = {
   loadHomepage,
   loadLogin,
@@ -1978,5 +1958,5 @@ module.exports = {
   loadCricket,
   loadBasketball,
   loadBestSellers,
+  getFilterModalContent,
 };
-

@@ -36,7 +36,7 @@
               <select 
                 id="orderStatus" 
                 class="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                <%= ['Cancelled', 'Returned'].includes(order.orderStatus) ? 'disabled' : '' %>
+                <%= ['Cancelled', 'Returned', 'Delivered'].includes(order.orderStatus) ? 'disabled' : '' %>
               >
                 <option value="Placed" <%= order.orderStatus === 'Placed' ? 'selected' : '' %>>Placed</option>
                 <option value="Processing" <%= order.orderStatus === 'Processing' ? 'selected' : '' %>>Processing</option>
@@ -48,7 +48,7 @@
               <button 
                 onclick="updateOrderStatus()" 
                 class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                <%= ['Cancelled', 'Returned'].includes(order.orderStatus) ? 'disabled' : '' %>
+                <%= ['Cancelled', 'Returned', 'Delivered'].includes(order.orderStatus) ? 'disabled' : '' %>
               >
                 Update Status
               </button>
@@ -119,9 +119,19 @@
                         paymentStatusClass = 'bg-red-100 text-red-800';
                         break;
                       case 'Refunded':
-                        paymentStatusClass = 'bg-blue-100 text-blue-800';
-                        if (order.paymentMethod === 'wallet' || (order.orderStatus === 'Returned' && order.returnStatus === 'Approved') || order.orderStatus === 'Cancelled') {
-                          paymentStatusText = 'Refunded to Wallet';
+                         // Show refunded only when refund actually processed
+                        if (order.orderStatus === 'Cancelled' || (order.orderStatus === 'Returned' && order.returnStatus === 'Approved')) {
+                          paymentStatusClass = 'bg-blue-100 text-blue-800';
+                          // If to wallet add note
+                          if (order.paymentMethod === 'wallet') {
+                            paymentStatusText = 'Refunded to Wallet';
+                          } else {
+                            paymentStatusText = 'Refunded';
+                          }
+                        } else {
+                          // Refund pending verification – treat as Paid until processed
+                          paymentStatusClass = 'bg-green-100 text-green-800';
+                          paymentStatusText = 'Paid';
                         }
                         break;
                       default:
@@ -404,20 +414,20 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert(data.message);
+            showToast(data.message);
             window.location.reload();
           } else {
-            alert(data.message || 'Failed to update order status');
+            showToast(data.message || 'Failed to update order status');
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          alert('An error occurred while processing your request');
+          showToast('An error occurred while processing your request');
         });
       }
       
       function verifyReturn(orderId, action) {
-        if (!confirm(`Are you sure you want to ${action} this return request?`)) {
+        if (openConfirmModal(`Are you sure you want to ${action} this return request?`)) {
           return;
         }
         
@@ -434,17 +444,61 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert(data.message);
+            showToast(data.message);
             window.location.reload();
           } else {
-            alert(data.message || `Failed to ${action} return`);
+            showToast(data.message || `Failed to ${action} return`);
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          alert('An error occurred while processing your request');
+          showToast('An error occurred while processing your request');
         });
       }
     </script>
-  </body>
+  <!-- Toast Container -->
+<div id="toastContainer" class="fixed top-5 right-5 space-y-2 z-50"></div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+  <div class="bg-white rounded-lg p-6 w-full max-w-sm">
+    <p id="confirmMessage" class="mb-4 text-gray-800"></p>
+    <div class="flex justify-end space-x-2">
+      <button id="confirmNo" class="px-4 py-2 bg-gray-300 rounded">No</button>
+      <button id="confirmYes" class="px-4 py-2 bg-blue-600 text-white rounded">Yes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showToast(message, type='success'){
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    const bg = type==='success' ? 'bg-green-500' : 'bg-red-500';
+    toast.className = `${bg} text-white px-4 py-2 rounded shadow`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(()=> toast.remove(), 3000);
+  }
+
+  function openConfirmModal(message, onConfirm){
+    const modal = document.getElementById('confirmModal');
+    const msgEl = document.getElementById('confirmMessage');
+    msgEl.textContent = message;
+    modal.classList.remove('hidden');
+    const yesBtn = document.getElementById('confirmYes');
+    const noBtn = document.getElementById('confirmNo');
+    const cleanup = () => {
+      modal.classList.add('hidden');
+      yesBtn.removeEventListener('click', yesHandler);
+      noBtn.removeEventListener('click', noHandler);
+    };
+    const yesHandler = () => { cleanup(); onConfirm(); };
+    const noHandler = () => cleanup();
+    yesBtn.addEventListener('click', yesHandler);
+    noBtn.addEventListener('click', noHandler);
+  }
+</script>
+
+</body>
 </html>

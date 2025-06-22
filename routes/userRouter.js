@@ -9,108 +9,22 @@ const orderController = require('../controllers/user/orderController');
 const couponController = require('../controllers/user/couponController');
 const { userAuth } = require('../middleware/auth');
 const passport = require('passport');
-const multer = require('multer');
-
-// --- Multer Storage for Return Images ---
-const returnStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = 'public/uploads/returns';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, req.params.orderId + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+const { uploadProfileImage, handleProfileImageUpload, uploadReturnImage } = require('../middleware/multerConfig');
 const path = require('path');
 const fs = require('fs');
-
-
-const profileStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = 'public/uploads/profiles';
-   
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-   
-    const userId = req.session.user?._id || 'unknown';
-    cb(null, userId + '-' + Date.now() + path.extname(file.originalname));
-  }
-});
-
-
-const imageFilter = function (req, file, cb) {
-  
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-  const allowedExtensions = /\.(jpg|jpeg|png|gif)$/i;
-  
-  console.log('File upload attempt:', { 
-    originalname: file.originalname, 
-    mimetype: file.mimetype 
-  });
-  
-  if (!allowedMimeTypes.includes(file.mimetype) || !file.originalname.match(allowedExtensions)) {
-    console.log('File rejected: not an allowed image type');
-    return cb(new Error('Only image files (JPG, JPEG, PNG, GIF) are allowed!'), false);
-  }
-  
-  console.log('File accepted as valid image');
-  cb(null, true);
-};
-
-const uploadProfileImage = multer({ 
-  storage: profileStorage,
-  fileFilter: imageFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024
-  }
-}).single('profileImage');
-
-const handleProfileImageUpload = (req, res, next) => {
-  uploadProfileImage(req, res, function(err) {
-    if (err instanceof multer.MulterError) {
-      console.error('Multer error:', err);
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).render('edit-profile', { 
-          user: req.session.user,
-          error: 'File too large. Maximum size is 5MB.'
-        });
-      }
-      return res.status(400).render('edit-profile', { 
-        user: req.session.user,
-        error: `Upload error: ${err.message}`
-      });
-    } else if (err) {
-      console.error('Non-multer error:', err);
-      return res.status(400).render('edit-profile', { 
-        user: req.session.user,
-        error: err.message
-      });
-    }
-    next();
-  });
-};
-
 
 router.get('/', userController.loadHomepage);
 router.get('/login', userController.loadLogin);
 
-  router.get('/signup', userController.loadSignUp);
-  router.get('/verifyOTP', userController.loadVerifyOTP); 
-  router.get('/pageNotFound', userController.loadPageNotFound);
-  router.get('/shopall', userController.loadShopAll);
+router.get('/signup', userController.loadSignUp);
+router.get('/verifyOTP', userController.loadVerifyOTP); 
+router.get('/pageNotFound', userController.loadPageNotFound);
+router.get('/shopall', userController.loadShopAll);
+router.get('/shopall/filter-modal', userController.getFilterModalContent);
 router.get('/bestsellers', userController.loadBestSellers);
-  router.get('/product/:id', userController.loadProductDetail);
-  router.get('/football', userController.loadFootball);
-  router.get('/cricket',userController.loadCricket)
+router.get('/product/:id', userController.loadProductDetail);
+router.get('/football', userController.loadFootball);
+router.get('/cricket',userController.loadCricket)
 router.get('/basketball', userController.loadBasketball)
 // router.get('/NewArrivals',userController.loadNewArrivals)
 
@@ -118,7 +32,7 @@ router.get('/basketball', userController.loadBasketball)
 router.get('/wishlist', userAuth, wishlistController.loadWishlist);
 router.post('/wishlist/add/:productId', userAuth, wishlistController.addToWishlist);
 router.delete('/wishlist/remove/:productId', userAuth, wishlistController.removeFromWishlist);
-router.get('/wishlist/check/:productId', wishlistController.checkWishlistStatus);
+router.get('/wishlist/check/:productId', userAuth, wishlistController.checkWishlistStatus);
 
 
 router.get('/cart', userAuth, cartController.loadCart);
@@ -143,13 +57,7 @@ router.post('/coupons/remove', userAuth, couponController.removeCoupon);
 router.get('/orders', userAuth, orderController.loadOrders);
 router.get('/orders/:orderId', userAuth, orderController.loadOrderDetails);
 router.post('/orders/:orderId/cancel', userAuth, orderController.cancelOrder);
-const uploadReturnImages = multer({ 
-  storage: returnStorage, 
-  fileFilter: imageFilter,
-  limits: { fileSize: 5 * 1024 * 1024, files: 3 }
-}).array('returnImages', 3);
-
-router.post('/orders/:orderId/return', userAuth, uploadReturnImages, orderController.returnOrder);
+router.post('/orders/:orderId/return', userAuth, uploadReturnImage, orderController.returnOrder);
 router.get('/orders/:orderId/invoice', userAuth, orderController.generateInvoice);
 
 router.get('/profile', userAuth, profileController.loadProfile);

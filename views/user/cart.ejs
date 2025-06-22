@@ -133,7 +133,10 @@
                   
                 
                   const sizeObj = product.sizes.find(s => s.size === item.size);
-                  const isUnavailable = isOutOfStock || !sizeObj || sizeObj.quantity < item.quantity;
+                  const availableQty = sizeObj ? sizeObj.quantity : 0;
+                  const isUnavailable = isOutOfStock || !sizeObj || availableQty === 0;
+                  const incrementDisabled = isUnavailable || item.quantity >= availableQty;
+                  const decrementDisabled = item.quantity <= 1;
                 %>
                   <li class="p-4 hover:bg-gray-50 transition-colors <%= isUnavailable ? 'out-of-stock' : '' %>">
                     <div class="flex items-center space-x-4">
@@ -210,8 +213,8 @@
                         <div class="quantity-control">
                           <button 
                             class="quantity-btn decrement-btn" 
-                            data-item-id="<%= item._id %>"
-                            <%= isUnavailable ? 'disabled' : '' %>
+                            data-item-id="<%= item._id %>" 
+                            <%= decrementDisabled ? 'disabled' : '' %>
                           >
                             <i class="fas fa-minus text-xs"></i>
                           </button>
@@ -224,8 +227,8 @@
                           >
                           <button 
                             class="quantity-btn increment-btn" 
-                            data-item-id="<%= item._id %>"
-                            <%= isUnavailable ? 'disabled' : '' %>
+                            data-item-id="<%= item._id %>" 
+                            <%= incrementDisabled ? 'disabled' : '' %>
                           >
                             <i class="fas fa-plus text-xs"></i>
                           </button>

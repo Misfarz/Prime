@@ -219,13 +219,26 @@
                         window.location.href = data.redirect;
                     }
                 } catch (error) {
-                    alert(error.message);
+                    showToast(error.message,'error');
                     isProcessing = false;
                     payBtn.innerHTML = originalBtnText;
                     payBtn.disabled = false;
                 }
             });
         });
+    </script>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 space-y-2 z-50"></div>
+    <script>
+      function showToast(message,type='success'){
+        const container=document.getElementById('toastContainer');
+        const toast=document.createElement('div');
+        const bg=type==='success'?'bg-green-500':'bg-red-500';
+        toast.className=`${bg} text-white px-4 py-2 rounded shadow`;
+        toast.textContent=message;
+        container.appendChild(toast);
+        setTimeout(()=>toast.remove(),3000);
+      }
     </script>
 </body>
 </html>

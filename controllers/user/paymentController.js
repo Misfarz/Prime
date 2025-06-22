@@ -99,6 +99,25 @@ const choosePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cart is empty' });
     }
 
+    // -------- Real-time stock validation --------
+    const outOfStockItems = [];
+    for (const item of cart.items) {
+      const product = item.product;
+      if (!product) continue;
+      const sizeObj = product.sizes?.find(s => s.size === item.size);
+      if (!sizeObj || sizeObj.quantity < item.quantity) {
+        outOfStockItems.push({ productName: product.productName, size: item.size });
+      }
+    }
+    if (outOfStockItems.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Some items went out of stock. Please review your cart.',
+        outOfStockItems,
+      });
+    }
+    // -------------------------------------------
+
     const { subtotal, discountAmount } = calculateCart(cart.items);
     const shipping = 50;
     const tax = Math.round(subtotal * 0.05);

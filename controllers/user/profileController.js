@@ -110,6 +110,7 @@ const loadProfile = async (req, res) => {
       addresses,
       activeTab,
       orders: [],
+       query: req.query,
     });
   } catch (error) {
     console.error("Failed to load profile:", error);
@@ -540,8 +541,81 @@ const getAddressData = async (req, res) => {
   }
 };
 
+
+async function processReferralReward(referrerId, newUserId) {
+  try {
+    const referrer = await User.findById(referrerId);
+    const newUser = await User.findById(newUserId);
+    if (!referrer || !newUser) return;
+
+    const newUserReward = 35;
+    newUser.wallet += newUserReward;
+
+    const newUserTransaction = new WalletTransaction({
+      user: newUserId,
+      amount: newUserReward,
+      type: "credit",
+      description: "Referral bonus for joining with a referral code",
+    });
+
+    const referrerReward = newUserReward * 2;
+    referrer.wallet += referrerReward;
+    referrer.redeemedUsers.push(newUserId);
+
+    const referrerTransaction = new WalletTransaction({
+      user: referrerId,
+      amount: referrerReward,
+      type: "credit",
+      description: `Referral reward for inviting ${newUser.name}`,
+    });
+
+    await Promise.all([
+      newUser.save(),
+      referrer.save(),
+      newUserTransaction.save(),
+      referrerTransaction.save(),
+    ]);
+
+  } catch (err) {
+    console.error("Error processing referral reward:", err);
+  }
+}
+
+const claimReferral = async (req, res) => {
+  try {
+    const userId = req.session.user._id;
+    const { referalCode } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.redirect("/login");
+
+    // Eligibility checks
+    if (!user.googleId || user.referredBy || user.redeemed) {
+      return res.redirect("/profile?tab=referrals&referralError=not-eligible");
+    }
+
+    // Validate code
+    const referrer = await User.findOne({ referalCode });
+    if (!referrer || referrer._id.equals(userId)) {
+      return res.redirect("/profile?tab=referrals&referralError=invalid-code");
+    }
+
+    user.referredBy = referrer._id;
+    user.redeemed = true;
+    await user.save();
+
+    await processReferralReward(referrer._id, userId);
+
+    return res.redirect("/profile?tab=referrals&referralSuccess=claimed");
+  } catch (err) {
+    console.error("Claim referral error:", err);
+    return res.redirect("/profile?tab=referrals&referralError=server");
+  }
+};
+
 module.exports = {
   loadProfile,
+  claimReferral,
   loadEditProfile,
   updateProfile,
   loadChangePassword,

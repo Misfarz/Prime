@@ -325,7 +325,20 @@
                             </div>
                         <% } %>
                     <% } else if (activeTab === 'referrals') { %>
-                        <!-- Referrals Tab -->
+                        <script>
+                          const params = new URLSearchParams(window.location.search);
+                          const msgEl = document.getElementById('referral-msg');
+                          if(msgEl){
+                            if(params.get('referralError')){
+                              const map = { 'invalid-code':'Invalid referral code.','not-eligible':'You are not eligible to claim referral.','server':'Server error. Try later.'};
+                              msgEl.textContent = map[params.get('referralError')] || 'Error';
+                              msgEl.classList.add('text-red-600');
+                            } else if(params.get('referralSuccess')==='claimed'){
+                              msgEl.textContent = 'Referral claimed! Check your wallet.';
+                              msgEl.classList.add('text-green-600');
+                            }
+                          }
+                        </script>
                         <div class="mb-6">
                             <h2 class="text-xl font-semibold mb-4">My Referrals</h2>
                             
@@ -347,6 +360,17 @@
                                     </div>
                                 </div>
                             </div>
+                                <!-- Referrals Tab -->
+                        <% if (user.googleId && !user.referredBy && !user.redeemed) { %>
+                        <div class="rounded-lg p-6 text-black shadow-lg mb-6">
+                            <h3 class="font-semibold mb-2">Claim a Referral Code</h3>
+                            <form action="/profile/claim-referral" method="POST" class="flex flex-col md:flex-row gap-3 items-start md:items-center">
+                                <input type="text" name="referalCode" placeholder="Enter referral code" required class="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                <button type="submit" class="px-5 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition">Claim ₹35</button>
+                            </form>
+                            <p id="referral-msg" class="text-sm mt-2"></p>
+                        </div>
+                        <% } %>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                 <div class="border rounded-lg p-5">

@@ -66,6 +66,9 @@ router.post('/profile/update', userAuth, handleProfileImageUpload, profileContro
 router.get('/profile/change-password', userAuth, profileController.loadChangePassword);
 router.post('/profile/change-password', userAuth, profileController.changePassword);
 
+// Claim referral for Google users
+router.post('/profile/claim-referral', userAuth, profileController.claimReferral);
+
 
 router.get('/profile/addresses', userAuth, profileController.loadAddressManagement);
 router.post('/profile/addresses/add', userAuth, profileController.addAddress);

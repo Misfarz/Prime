@@ -7,7 +7,7 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
-const loadOrders = async (req, res) => {
+const loadOrders = async (req, res, next) => {
   try {
     if (!req.session.user) {
       return res.redirect("/login");
@@ -52,11 +52,8 @@ const loadOrders = async (req, res) => {
       activeTab: "orders",
     });
   } catch (error) {
-    console.error("Error loading orders page:", error);
-    res.status(500).render("error", {
-      error: "Failed to load orders page",
-      user: req.session.user,
-    });
+    // Forward error to the global error handler
+    next(error);
   }
 };
 

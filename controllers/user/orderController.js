@@ -305,7 +305,7 @@ const returnOrder = async (req, res) => {
   }
 };
 
-const generateInvoice = async (req, res) => {
+const generateInvoice = async (req, res,next) => {
   try {
     if (!req.session.user) {
       return res.redirect("/login");
@@ -459,8 +459,7 @@ const generateInvoice = async (req, res) => {
       });
     });
   } catch (error) {
-    console.error("Error generating invoice:", error);
-    res.status(500).send("Error generating invoice");
+    next(error)
   }
 };
 

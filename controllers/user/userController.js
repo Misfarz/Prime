@@ -6,6 +6,7 @@ const Product = require("../../models/productSchema");
 const { Category } = require("../../models/categorySchema");
 const WalletTransaction = require("../../models/walletTransactionSchema");
 const Order = require("../../models/orderSchema");
+const { constants } = require("buffer");
 require("dotenv").config();
 
 const loadVerifyOTP = (req, res) => {
@@ -155,7 +156,7 @@ const loadShopAll = async (req, res) => {
     const query = { isListed: true };
 
     if (categoryId) {
-      query.category = categoryId;
+      query.category = new mongoose.Types.ObjectId(categoryId);
     }
 
     if (subcategory) {
@@ -706,749 +707,14 @@ const loadProductDetail = async (req, res) => {
   }
 };
 
-const loadFootball = async (req, res) => {
-  try {
-    const user = req.session.user;
-    const sort = req.query.sort || "alphabetical-asc";
-    const search = req.query.search || "";
-    const subcategory = req.query.subcategory || "";
-    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : "";
-    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
-    const skip = (page - 1) * limit;
 
-    let sortOption;
-    switch (sort) {
-      case "low-to-high":
-        sortOption = { salePrice: 1, regularPrice: 1 };
-        break;
-      case "high-to-low":
-        sortOption = { salePrice: -1, regularPrice: -1 };
-        break;
-      case "alphabetical-desc":
-        sortOption = { productName: -1 };
-        break;
-      case "alphabetical-asc":
-      default:
-        sortOption = { productName: 1 };
-        break;
-    }
 
-    const categories = await Category.find({ isListed: true }).sort({
-      name: 1,
-    });
 
-    const footballCategory = await Category.findOne({
-      name: { $regex: new RegExp("^football$", "i") },
-      isListed: true,
-    });
 
-    if (!footballCategory) {
-      return res
-        .status(404)
-        .render("page-404", { message: "Football category not found" });
-    }
 
-    const categoryId = footballCategory._id.toString();
 
-    const subcategories = footballCategory.subcategories || [];
 
-    const query = { isListed: true, category: categoryId };
 
-    if (subcategory) {
-      query.subcategory = subcategory;
-    }
-
-    if (minPrice !== "" && maxPrice !== "") {
-      query.$or = [
-        { salePrice: { $gte: minPrice, $lte: maxPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $gte: minPrice, $lte: maxPrice } },
-          ],
-        },
-      ];
-    } else if (minPrice !== "") {
-      query.$or = [
-        { salePrice: { $gte: minPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $gte: minPrice } },
-          ],
-        },
-      ];
-    } else if (maxPrice !== "") {
-      query.$or = [
-        { salePrice: { $lte: maxPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $lte: maxPrice } },
-          ],
-        },
-      ];
-    }
-
-    if (search) {
-      if (query.$or) {
-        const priceConditions = query.$or;
-        query.$or = undefined;
-
-        query.$and = [
-          { $or: priceConditions },
-          {
-            $or: [
-              { productName: { $regex: search, $options: "i" } },
-              { description: { $regex: search, $options: "i" } },
-            ],
-          },
-        ];
-      } else {
-        query.$or = [
-          { productName: { $regex: search, $options: "i" } },
-          { description: { $regex: search, $options: "i" } },
-        ];
-      }
-    }
-
-    const total = await Product.countDocuments(query);
-
-    let products;
-    if (sort === "low-to-high" || sort === "high-to-low") {
-      const priceOrder = sort === "low-to-high" ? 1 : -1;
-      products = await Product.aggregate([
-        { $match: query },
-        {
-          $lookup: {
-            from: "categories",
-            localField: "category",
-            foreignField: "_id",
-            as: "category",
-          },
-        },
-        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-        {
-          $addFields: {
-            offerPercent: {
-              $max: [
-                { $ifNull: ["$productOffer", 0] },
-                { $ifNull: ["$category.categoryOffer", 0] },
-              ],
-            },
-            effectivePrice: {
-              $cond: [
-                { $gt: [{ $ifNull: ["$salePrice", null] }, null] },
-                "$salePrice",
-                {
-                  $cond: [
-                    { $gt: [{ $ifNull: ["$offerPercent", 0] }, 0] },
-                    {
-                      $subtract: [
-                        "$regularPrice",
-                        {
-                          $multiply: [
-                            "$regularPrice",
-                            { $divide: ["$offerPercent", 100] },
-                          ],
-                        },
-                      ],
-                    },
-                    "$regularPrice",
-                  ],
-                },
-              ],
-            },
-          },
-        },
-        { $sort: { effectivePrice: priceOrder } },
-        { $skip: skip },
-        { $limit: limit },
-      ]);
-    } else {
-      products = await Product.find(query)
-        .populate("category", "name")
-        .sort(sortOption)
-        .skip(skip)
-        .limit(limit);
-    }
-
-    const totalPages = Math.ceil(total / limit);
-
-    let priceStats = [];
-    try {
-      priceStats = await Product.aggregate([
-        {
-          $match: {
-            isListed: true,
-            category: new mongoose.Types.ObjectId(categoryId),
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            minPrice: { $min: { $ifNull: ["$salePrice", "$regularPrice"] } },
-            maxPrice: { $max: "$regularPrice" },
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error("Error in price aggregation:", error);
-
-      const minPriceProduct = await Product.findOne({
-        isListed: true,
-        category: categoryId,
-      }).sort({ salePrice: 1, regularPrice: 1 });
-      const maxPriceProduct = await Product.findOne({
-        isListed: true,
-        category: categoryId,
-      }).sort({ regularPrice: -1 });
-
-      if (minPriceProduct && maxPriceProduct) {
-        priceStats = [
-          {
-            minPrice: minPriceProduct.salePrice || minPriceProduct.regularPrice,
-            maxPrice: maxPriceProduct.regularPrice,
-          },
-        ];
-      }
-    }
-
-    const priceRange =
-      priceStats.length > 0
-        ? {
-            min: Math.floor(priceStats[0].minPrice),
-            max: Math.ceil(priceStats[0].maxPrice),
-          }
-        : { min: 0, max: 1000 };
-
-    let searchMessage = "";
-    if (search && products.length === 0) {
-      searchMessage = `No products found matching "${search}". Try a different search term.`;
-    } else if (search && products.length > 0) {
-      searchMessage = `Showing results for "${search}"`;
-    }
-
-    return res.render("football", {
-      user: user || null,
-      products,
-      categories,
-      subcategories,
-      currentPage: page,
-      totalPages,
-      sort,
-      search,
-      searchMessage,
-      categoryId,
-      subcategory,
-      minPrice: minPrice || "",
-      maxPrice: maxPrice || "",
-      priceRange,
-      category: footballCategory,
-    });
-  } catch (error) {
-    console.error("Football page error:", error);
-    res.status(500).render("page-404", { message: "Server Error" });
-  }
-};
-
-const loadCricket = async (req, res) => {
-  try {
-    const user = req.session.user;
-    const sort = req.query.sort || "alphabetical-asc";
-    const search = req.query.search || "";
-    const subcategory = req.query.subcategory || "";
-    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : "";
-    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
-    const skip = (page - 1) * limit;
-
-    let sortOption;
-    switch (sort) {
-      case "low-to-high":
-        sortOption = { salePrice: 1, regularPrice: 1 };
-        break;
-      case "high-to-low":
-        sortOption = { salePrice: -1, regularPrice: -1 };
-        break;
-      case "alphabetical-desc":
-        sortOption = { productName: -1 };
-        break;
-      case "alphabetical-asc":
-      default:
-        sortOption = { productName: 1 };
-        break;
-    }
-
-    const categories = await Category.find({ isListed: true }).sort({
-      name: 1,
-    });
-
-    const cricketCategory = await Category.findOne({
-      name: { $regex: new RegExp("^cricket$", "i") },
-      isListed: true,
-    });
-
-    if (!cricketCategory) {
-      return res
-        .status(404)
-        .render("page-404", { message: "cricket category not found" });
-    }
-
-    const categoryId = cricketCategory._id.toString();
-
-    const subcategories = cricketCategory.subcategories || [];
-
-    const query = { isListed: true, category: categoryId };
-
-    if (subcategory) {
-      query.subcategory = subcategory;
-    }
-
-    if (minPrice !== "" && maxPrice !== "") {
-      query.$or = [
-        { salePrice: { $gte: minPrice, $lte: maxPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $gte: minPrice, $lte: maxPrice } },
-          ],
-        },
-      ];
-    } else if (minPrice !== "") {
-      query.$or = [
-        { salePrice: { $gte: minPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $gte: minPrice } },
-          ],
-        },
-      ];
-    } else if (maxPrice !== "") {
-      query.$or = [
-        { salePrice: { $lte: maxPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $lte: maxPrice } },
-          ],
-        },
-      ];
-    }
-
-    if (search) {
-      if (query.$or) {
-        const priceConditions = query.$or;
-        query.$or = undefined;
-
-        query.$and = [
-          { $or: priceConditions },
-          {
-            $or: [
-              { productName: { $regex: search, $options: "i" } },
-              { description: { $regex: search, $options: "i" } },
-            ],
-          },
-        ];
-      } else {
-        query.$or = [
-          { productName: { $regex: search, $options: "i" } },
-          { description: { $regex: search, $options: "i" } },
-        ];
-      }
-    }
-
-    const total = await Product.countDocuments(query);
-
-    let products;
-    if (sort === "low-to-high" || sort === "high-to-low") {
-      const priceOrder = sort === "low-to-high" ? 1 : -1;
-      products = await Product.aggregate([
-        { $match: query },
-        {
-          $lookup: {
-            from: "categories",
-            localField: "category",
-            foreignField: "_id",
-            as: "category",
-          },
-        },
-        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-        {
-          $addFields: {
-            offerPercent: {
-              $max: [
-                { $ifNull: ["$productOffer", 0] },
-                { $ifNull: ["$category.categoryOffer", 0] },
-              ],
-            },
-            effectivePrice: {
-              $cond: [
-                { $gt: [{ $ifNull: ["$salePrice", null] }, null] },
-                "$salePrice",
-                {
-                  $cond: [
-                    { $gt: [{ $ifNull: ["$offerPercent", 0] }, 0] },
-                    {
-                      $subtract: [
-                        "$regularPrice",
-                        {
-                          $multiply: [
-                            "$regularPrice",
-                            { $divide: ["$offerPercent", 100] },
-                          ],
-                        },
-                      ],
-                    },
-                    "$regularPrice",
-                  ],
-                },
-              ],
-            },
-          },
-        },
-        { $sort: { effectivePrice: priceOrder } },
-        { $skip: skip },
-        { $limit: limit },
-      ]);
-    } else {
-      products = await Product.find(query)
-        .populate("category", "name")
-        .sort(sortOption)
-        .skip(skip)
-        .limit(limit);
-    }
-
-    const totalPages = Math.ceil(total / limit);
-
-    let priceStats = [];
-    try {
-      priceStats = await Product.aggregate([
-        {
-          $match: {
-            isListed: true,
-            category: new mongoose.Types.ObjectId(categoryId),
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            minPrice: { $min: { $ifNull: ["$salePrice", "$regularPrice"] } },
-            maxPrice: { $max: "$regularPrice" },
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error("Error in price aggregation:", error);
-
-      const minPriceProduct = await Product.findOne({
-        isListed: true,
-        category: categoryId,
-      }).sort({ salePrice: 1, regularPrice: 1 });
-      const maxPriceProduct = await Product.findOne({
-        isListed: true,
-        category: categoryId,
-      }).sort({ regularPrice: -1 });
-
-      if (minPriceProduct && maxPriceProduct) {
-        priceStats = [
-          {
-            minPrice: minPriceProduct.salePrice || minPriceProduct.regularPrice,
-            maxPrice: maxPriceProduct.regularPrice,
-          },
-        ];
-      }
-    }
-
-    const priceRange =
-      priceStats.length > 0
-        ? {
-            min: Math.floor(priceStats[0].minPrice),
-            max: Math.ceil(priceStats[0].maxPrice),
-          }
-        : { min: 0, max: 1000 };
-
-    let searchMessage = "";
-    if (search && products.length === 0) {
-      searchMessage = `No products found matching "${search}". Try a different search term.`;
-    } else if (search && products.length > 0) {
-      searchMessage = `Showing results for "${search}"`;
-    }
-
-    return res.render("cricket", {
-      user: user || null,
-      products,
-      categories,
-      subcategories,
-      currentPage: page,
-      totalPages,
-      sort,
-      search,
-      searchMessage,
-      categoryId,
-      subcategory,
-      minPrice: minPrice || "",
-      maxPrice: maxPrice || "",
-      priceRange,
-      category: cricketCategory,
-    });
-  } catch (error) {
-    console.error("Cricket page error:", error);
-    res.status(500).render("page-404", { message: "Server Error" });
-  }
-};
-
-const loadBasketball = async (req, res) => {
-  try {
-    const user = req.session.user;
-    const sort = req.query.sort || "alphabetical-asc";
-    const search = req.query.search || "";
-    const subcategory = req.query.subcategory || "";
-    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : "";
-    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : "";
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
-    const skip = (page - 1) * limit;
-
-    let sortOption;
-    switch (sort) {
-      case "low-to-high":
-        sortOption = { salePrice: 1, regularPrice: 1 };
-        break;
-      case "high-to-low":
-        sortOption = { salePrice: -1, regularPrice: -1 };
-        break;
-      case "alphabetical-desc":
-        sortOption = { productName: -1 };
-        break;
-      case "alphabetical-asc":
-      default:
-        sortOption = { productName: 1 };
-        break;
-    }
-
-    const categories = await Category.find({ isListed: true }).sort({
-      name: 1,
-    });
-
-    const basketballCategory = await Category.findOne({
-      name: { $regex: new RegExp("^basketball$", "i") },
-      isListed: true,
-    });
-
-    if (!basketballCategory) {
-      return res
-        .status(404)
-        .render("page-404", { message: "basketball category not found" });
-    }
-
-    const categoryId = basketballCategory._id.toString();
-
-    const subcategories = basketballCategory.subcategories || [];
-
-    const query = { isListed: true, category: categoryId };
-
-    if (subcategory) {
-      query.subcategory = subcategory;
-    }
-
-    if (minPrice !== "" && maxPrice !== "") {
-      query.$or = [
-        { salePrice: { $gte: minPrice, $lte: maxPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $gte: minPrice, $lte: maxPrice } },
-          ],
-        },
-      ];
-    } else if (minPrice !== "") {
-      query.$or = [
-        { salePrice: { $gte: minPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $gte: minPrice } },
-          ],
-        },
-      ];
-    } else if (maxPrice !== "") {
-      query.$or = [
-        { salePrice: { $lte: maxPrice } },
-        {
-          $and: [
-            { salePrice: { $exists: false } },
-            { regularPrice: { $lte: maxPrice } },
-          ],
-        },
-      ];
-    }
-
-    if (search) {
-      if (query.$or) {
-        const priceConditions = query.$or;
-        query.$or = undefined;
-
-        query.$and = [
-          { $or: priceConditions },
-          {
-            $or: [
-              { productName: { $regex: search, $options: "i" } },
-              { description: { $regex: search, $options: "i" } },
-            ],
-          },
-        ];
-      } else {
-        query.$or = [
-          { productName: { $regex: search, $options: "i" } },
-          { description: { $regex: search, $options: "i" } },
-        ];
-      }
-    }
-
-    const total = await Product.countDocuments(query);
-
-    let products;
-    if (sort === "low-to-high" || sort === "high-to-low") {
-      const priceOrder = sort === "low-to-high" ? 1 : -1;
-      products = await Product.aggregate([
-        { $match: query },
-        {
-          $lookup: {
-            from: "categories",
-            localField: "category",
-            foreignField: "_id",
-            as: "category",
-          },
-        },
-        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-        {
-          $addFields: {
-            offerPercent: {
-              $max: [
-                { $ifNull: ["$productOffer", 0] },
-                { $ifNull: ["$category.categoryOffer", 0] },
-              ],
-            },
-            effectivePrice: {
-              $cond: [
-                { $gt: [{ $ifNull: ["$salePrice", null] }, null] },
-                "$salePrice",
-                {
-                  $cond: [
-                    { $gt: [{ $ifNull: ["$offerPercent", 0] }, 0] },
-                    {
-                      $subtract: [
-                        "$regularPrice",
-                        {
-                          $multiply: [
-                            "$regularPrice",
-                            { $divide: ["$offerPercent", 100] },
-                          ],
-                        },
-                      ],
-                    },
-                    "$regularPrice",
-                  ],
-                },
-              ],
-            },
-          },
-        },
-        { $sort: { effectivePrice: priceOrder } },
-        { $skip: skip },
-        { $limit: limit },
-      ]);
-    } else {
-      products = await Product.find(query)
-        .populate("category", "name")
-        .sort(sortOption)
-        .skip(skip)
-        .limit(limit);
-    }
-
-    const totalPages = Math.ceil(total / limit);
-
-    let priceStats = [];
-    try {
-      priceStats = await Product.aggregate([
-        {
-          $match: {
-            isListed: true,
-            category: new mongoose.Types.ObjectId(categoryId),
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            minPrice: { $min: { $ifNull: ["$salePrice", "$regularPrice"] } },
-            maxPrice: { $max: "$regularPrice" },
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error("Error in price aggregation:", error);
-
-      const minPriceProduct = await Product.findOne({
-        isListed: true,
-        category: categoryId,
-      }).sort({ salePrice: 1, regularPrice: 1 });
-      const maxPriceProduct = await Product.findOne({
-        isListed: true,
-        category: categoryId,
-      }).sort({ regularPrice: -1 });
-
-      if (minPriceProduct && maxPriceProduct) {
-        priceStats = [
-          {
-            minPrice: minPriceProduct.salePrice || minPriceProduct.regularPrice,
-            maxPrice: maxPriceProduct.regularPrice,
-          },
-        ];
-      }
-    }
-
-    const priceRange =
-      priceStats.length > 0
-        ? {
-            min: Math.floor(priceStats[0].minPrice),
-            max: Math.ceil(priceStats[0].maxPrice),
-          }
-        : { min: 0, max: 1000 };
-
-    let searchMessage = "";
-    if (search && products.length === 0) {
-      searchMessage = `No products found matching "${search}". Try a different search term.`;
-    } else if (search && products.length > 0) {
-      searchMessage = `Showing results for "${search}"`;
-    }
-
-    return res.render("basketball", {
-      user: user || null,
-      products,
-      categories,
-      subcategories,
-      currentPage: page,
-      totalPages,
-      sort,
-      search,
-      searchMessage,
-      categoryId,
-      subcategory,
-      minPrice: minPrice || "",
-      maxPrice: maxPrice || "",
-      priceRange,
-      category: basketballCategory,
-    });
-  } catch (error) {
-    console.error("basketballpage error:", error);
-    res.status(500).render("page-404", { message: "Server Error" });
-  }
-};
 
 const loadForgotPassword = (req, res) => {
   try {
@@ -1802,12 +1068,18 @@ const resetPassword = async (req, res) => {
 // Load Best Sellers Page
 const loadBestSellers = async (req, res) => {
   try {
+    let user = req.session.user;
+
     const sort = req.query.sort || "alphabetical-asc";
+    const search = req.query.search || "";
+    const categoryId = req.query.category || "";
+    const subcategory = req.query.subcategory || "";
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : "";
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : "";
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
-    // Prepare user object with wishlist/cart similar to homepage
-    let user = req.session.user;
+
     if (user && user._id) {
       user = await User.findById(user._id)
         .populate("whishlist")
@@ -1818,23 +1090,116 @@ const loadBestSellers = async (req, res) => {
           },
         });
 
-      // cart count indicator
-      if (user.cart && user.cart.items) {
-        req.session.user.cartCount = user.cart.items.length;
-      } else {
-        req.session.user.cartCount = 0;
-      }
-
+      req.session.user.cartCount = user.cart?.items?.length || 0;
       req.session.user = user;
     }
 
-    // Aggregate orders to find top selling products
+    // Set sort options
+    let sortOption;
+    switch (sort) {
+      case "low-to-high":
+        sortOption = { salePrice: 1, regularPrice: 1 };
+        break;
+      case "high-to-low":
+        sortOption = { salePrice: -1, regularPrice: -1 };
+        break;
+      case "alphabetical-desc":
+        sortOption = { productName: -1 };
+        break;
+      case "alphabetical-asc":
+      default:
+        sortOption = { productName: 1 };
+        break;
+    }
+
+    const categories = await Category.find({ isListed: true }).sort({ name: 1 });
+
+    let selectedCategory = null;
+    if (categoryId) {
+      selectedCategory = await Category.findById(categoryId);
+    }
+
+    const subcategories = selectedCategory ? selectedCategory.subcategories : [];
+
+    // Initial query object
+    const query = { isListed: true };
+
+    if (categoryId) {
+      query.category = new mongoose.Types.ObjectId(categoryId);
+    }
+
+    if (subcategory) {
+      query.subcategory = subcategory;
+    }
+
+    // Price filters
+    if (minPrice !== "" && maxPrice !== "") {
+      query.$or = [
+        { salePrice: { $gte: minPrice, $lte: maxPrice } },
+        {
+          $and: [
+            { salePrice: { $exists: false } },
+            { regularPrice: { $gte: minPrice, $lte: maxPrice } },
+          ],
+        },
+      ];
+    } else if (minPrice !== "") {
+      query.$or = [
+        { salePrice: { $gte: minPrice } },
+        {
+          $and: [
+            { salePrice: { $exists: false } },
+            { regularPrice: { $gte: minPrice } },
+          ],
+        },
+      ];
+    } else if (maxPrice !== "") {
+      query.$or = [
+        { salePrice: { $lte: maxPrice } },
+        {
+          $and: [
+            { salePrice: { $exists: false } },
+            { regularPrice: { $lte: maxPrice } },
+          ],
+        },
+      ];
+    }
+
+    // Search filters
+    if (search) {
+      if (query.$or) {
+        const priceConditions = query.$or;
+        query.$or = undefined;
+        query.$and = [
+          { $or: priceConditions },
+          {
+            $or: [
+              { productName: { $regex: search, $options: "i" } },
+              { description: { $regex: search, $options: "i" } },
+            ],
+          },
+        ];
+      } else {
+        query.$or = [
+          { productName: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ];
+      }
+    }
+
+    // Get top selling product IDs
     const topProductsAgg = await Order.aggregate([
       { $unwind: "$items" },
-      // Exclude cancelled/returned quantities
       {
         $match: {
-          orderStatus: { $nin: ["Cancelled", "Returned", "Partially Cancelled", "Partially Returned"] },
+          orderStatus: {
+            $nin: [
+              "Cancelled",
+              "Returned",
+              "Partially Cancelled",
+              "Partially Returned",
+            ],
+          },
         },
       },
       {
@@ -1847,50 +1212,40 @@ const loadBestSellers = async (req, res) => {
       { $limit: 40 },
     ]);
 
-    const productIds = topProductsAgg.map((p) => p._id);
+    const topProductIds = topProductsAgg.map((p) => p._id);
 
-    // Fetch product details in the same order
-    const productsMap = await Product.find({ _id: { $in: productIds }, isListed: true })
-      .populate("category")
-      .lean();
+    // Apply bestseller filter to query
+    query._id = { $in: topProductIds };
 
-    // Maintain ranking order
-    // Compose products array keeping original popularity order
-    let products = productIds.map((id) => productsMap.find((p) => p._id.toString() === id.toString())).filter(Boolean);
-
-    // Helper to calculate effectivePrice similar to shopall logic
-    const getEffectivePrice = (p) => {
-      let offerPercent = 0;
-      if (p.productOffer) offerPercent = p.productOffer;
-      if (p.category && p.category.categoryOffer && p.category.categoryOffer > offerPercent) {
-        offerPercent = p.category.categoryOffer;
-      }
-      if (p.salePrice != null) return p.salePrice;
-      if (offerPercent > 0) return p.regularPrice - (p.regularPrice * offerPercent) / 100;
-      return p.regularPrice;
-    };
-
-    // Apply sort
-    switch (sort) {
-      case "low-to-high":
-        products.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
-        break;
-      case "high-to-low":
-        products.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
-        break;
-      case "alphabetical-desc":
-        products.sort((a, b) => b.productName.localeCompare(a.productName));
-        break;
-      case "alphabetical-asc":
-      default:
-        products.sort((a, b) => a.productName.localeCompare(b.productName));
-        break;
-    }
-
-    const total = products.length;
+    // Get total count of filtered bestsellers
+    const total = await Product.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
-    products = products.slice(skip, skip + limit);
+    // Fetch final paginated + sorted products
+    const products = await Product.find(query)
+      .populate("category", "name")
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit);
+
+        const priceStats = await Product.aggregate([
+      { $match: { isListed: true } },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: { $ifNull: ["$salePrice", "$regularPrice"] } },
+          maxPrice: { $max: "$regularPrice" },
+        },
+      },
+    ]);
+
+    const priceRange =
+      priceStats.length > 0
+        ? {
+            min: Math.floor(priceStats[0].minPrice),
+            max: Math.ceil(priceStats[0].maxPrice),
+          }
+        : { min: 0, max: 1000 };
 
     return res.render("bestsellers", {
       user: user || null,
@@ -1898,12 +1253,224 @@ const loadBestSellers = async (req, res) => {
       currentPage: page,
       totalPages,
       sort,
+      search,
+      categoryId,
+      subcategory,
+      minPrice,
+      maxPrice,
+      categories,
+      subcategories,
+      priceRange
     });
   } catch (error) {
     console.error("Best Sellers page error:", error);
     return res.status(500).render("page-404", { message: "Server Error" });
   }
 };
+
+const loadNewArrivals= async (req,res,next) =>  {
+
+  try {
+
+    const user = req.session.user;
+    const sort = req.query.sort || "alphabetical-asc";
+    const search = req.query.search || "";
+    const categoryId = req.query.category || "";
+    const subcategory = req.query.subcategory || "";
+    const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice) : "";
+    const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice) : "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    let sortOption;
+    switch (sort) {
+      case "low-to-high":
+        sortOption = { salePrice: 1, regularPrice: 1 };
+        break;
+      case "high-to-low":
+        sortOption = { salePrice:- 1, regularPrice: -1 };
+        break;
+      case "alphabetical-desc":
+        sortOption = { productName: -1 };
+        break;
+      case "alphabetical-asc":
+      default:
+        sortOption = { productName: 1 };
+        break;
+    }
+
+    const categories = await Category.find({ isListed: true }).sort({
+      name: 1,
+    });
+
+    let selectedCategory = null;
+    if (categoryId) {
+      selectedCategory = await Category.findById(categoryId);
+    }
+
+    const subcategories = selectedCategory
+      ? selectedCategory.subcategories
+      : [];
+
+    const query = { isListed: true, isnewproducts:true };
+
+    if (categoryId) {
+      query.category = new mongoose.Types.ObjectId(categoryId);
+    }
+
+    if (subcategory) {
+      query.subcategory = subcategory;
+    }
+
+    if (minPrice !== "" && maxPrice !== "") {
+      query.$or = [
+        { salePrice: { $gte: minPrice, $lte: maxPrice } },
+        {
+          $and: [
+            { salePrice: { $exists: false } },
+            { regularPrice: { $gte: minPrice, $lte: maxPrice } },
+          ],
+        },
+      ];
+    } else if (minPrice !== "") {
+      query.$or = [
+        { salePrice: { $gte: minPrice } },
+        {
+          $and: [
+            { salePrice: { $exists: false } },
+            { regularPrice: { $gte: minPrice } },
+          ],
+        },
+      ];
+    } else if (maxPrice !== "") {
+      query.$or = [
+        { salePrice: { $lte: maxPrice } },
+        {
+          $and: [
+            { salePrice: { $exists: false } },
+            { regularPrice: { $lte: maxPrice } },
+          ],
+        },
+      ];
+    }
+
+    if (search) {
+      if (query.$or) {
+        const priceConditions = query.$or;
+        query.$or = undefined;
+
+        query.$and = [
+          { $or: priceConditions },
+          {
+            $or: [
+              { productName: { $regex: search, $options: "i" } },
+              { description: { $regex: search, $options: "i" } },
+            ],
+          },
+        ];
+      } else {
+        query.$or = [
+          {isnewproducts : true},
+          { productName: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ];
+      }
+    }
+
+    const total = await Product.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    let newProducts;
+    
+   newProducts = await Product.find(query)
+        .populate("category", "name")
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit);
+  
+
+  
+
+    const priceStats = await Product.aggregate([
+      { $match: { isListed: true } },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: { $ifNull: ["$salePrice", "$regularPrice"] } },
+          maxPrice: { $max: "$regularPrice" },
+        },
+      },
+    ]);
+
+    const priceRange =
+      priceStats.length > 0
+        ? {
+            min: Math.floor(priceStats[0].minPrice),
+            max: Math.ceil(priceStats[0].maxPrice),
+          }
+        : { min: 0, max: 1000 };
+
+    let searchMessage = "";
+    if (search && products.length === 0) {
+      searchMessage = `No products found matching "${search}". Try a different search term.`;
+    } else if (search && products.length > 0) {
+      searchMessage = `Showing results for "${search}"`;
+    }
+
+    let filterMessage = "";
+    if (categoryId || subcategory || minPrice !== "" || maxPrice !== "") {
+      filterMessage = "Filtered results";
+
+      if (categoryId) {
+        const category = categories.find(
+          (cat) => cat._id.toString() === categoryId
+        );
+        if (category) {
+          filterMessage += ` for category "${category.name}"`;
+
+          if (subcategory) {
+            filterMessage += ` > "${subcategory}"`;
+          }
+        }
+      }
+
+      if (minPrice !== "" && maxPrice !== "") {
+        filterMessage += ` with price between $${minPrice} and $${maxPrice}`;
+      } else if (minPrice !== "") {
+        filterMessage += ` with price from $${minPrice}`;
+      } else if (maxPrice !== "") {
+        filterMessage += ` with price up to $${maxPrice}`;
+      }
+    }
+
+    return res.render("newArrivals", {
+      user: user || null,
+      newProducts,
+      categories,
+      subcategories,
+      currentPage: page,
+      totalPages,
+      sort,
+      search,
+      searchMessage,
+      filterMessage,
+      categoryId,
+      subcategory,
+      minPrice: minPrice || "",
+      maxPrice: maxPrice || "",
+      priceRange,
+    });
+
+
+    
+  } catch (error) {
+
+    next(error)
+    
+  }
+
+}
 
 const getFilterModalContent = async (req, res) => {
   try {
@@ -1954,9 +1521,8 @@ module.exports = {
   logout,
   loadProductDetail,
   loadShopAll,
-  loadFootball,
-  loadCricket,
-  loadBasketball,
   loadBestSellers,
+  loadNewArrivals,
   getFilterModalContent,
+  
 };

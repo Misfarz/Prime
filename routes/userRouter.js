@@ -7,6 +7,7 @@ const cartController = require("../controllers/user/cartController");
 const checkoutController = require('../controllers/user/checkoutController');
 const orderController = require('../controllers/user/orderController');
 const couponController = require('../controllers/user/couponController');
+const paymentController = require('../controllers/user/paymentController');
 const { userAuth } = require('../middleware/auth');
 const passport = require('passport');
 const { uploadProfileImage, handleProfileImageUpload, uploadReturnImage } = require('../middleware/multerConfig');
@@ -23,10 +24,7 @@ router.get('/shopall', userController.loadShopAll);
 router.get('/shopall/filter-modal', userController.getFilterModalContent);
 router.get('/bestsellers', userController.loadBestSellers);
 router.get('/product/:id', userController.loadProductDetail);
-router.get('/football', userController.loadFootball);
-router.get('/cricket',userController.loadCricket)
-router.get('/basketball', userController.loadBasketball)
-// router.get('/NewArrivals',userController.loadNewArrivals)
+router.get('/NewArrivals',userController.loadNewArrivals)
 
 
 router.get('/wishlist', userAuth, wishlistController.loadWishlist);
@@ -112,10 +110,8 @@ router.get('/auth/google/login/callback', passport.authenticate('google-login', 
 
 
  router.post('/signupaction', userController.signup);
-  router.post('/login', userController.login);
-
-  router.post('/verify-otp', userController.verifyOTP);
-
+ router.post('/login', userController.login);
+ router.post('/verify-otp', userController.verifyOTP);
  router.post('/resend-otp', userController.resendOTP);
  router.get('/logout', userController.logout);
 
@@ -127,27 +123,11 @@ router.post('/verify-reset-otp', userController.verifyResetOTP);
 router.post('/resend-reset-otp', userController.resendResetOTP);
 router.post('/reset-password', userController.resetPassword);
 
-// payment routes
-const paymentController = require('../controllers/user/paymentController');
-
-// Proceed to payment (from checkout)
 router.post('/proceed-payment', userAuth, paymentController.proceedPayment);
-
-// Choose payment (cod / wallet / razorpay)
 router.post('/choose-payment', userAuth, paymentController.choosePayment);
-
-// Razorpay verification callback
 router.post('/razorpay/verify', userAuth, paymentController.verifyRazorpayPayment);
-
-// Payment failure page
 router.get('/paymentFailure', userAuth, paymentController.paymentFailure);
-
-// Payment success will reuse existing order success handler
 router.get('/paymentSuccess/:orderId', userAuth, checkoutController.orderSuccess);
-
-
-
-
 
 
 module.exports = router;

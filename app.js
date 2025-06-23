@@ -48,21 +48,18 @@ app.use('/admin',adminRouter);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Global Error Handling Middleware
+
 app.use((err, req, res, next) => {
-  // Log full error details for debugging
-  console.error(err.stack || err);
 
   const status = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
 
-  // If the request is an AJAX/Fetch or explicitly asks for JSON, respond with JSON
   if (req.xhr || req.headers.accept?.includes("json") || req.originalUrl.startsWith("/api")) {
     return res.status(status).json({ success: false, message });
   }
 
-  // Otherwise render the generic error page
-  res.status(status).render("error", {
+  
+  res.status(status).render("page-404", {
     error: message,
     user: req.session?.user,
   });

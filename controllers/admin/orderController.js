@@ -25,7 +25,7 @@ const loadOrders = async (req, res) => {
       filter.orderStatus = statusFilter;
     }
 
-    // Add filter for return verification requests
+  
     if (returnFilter === "pending") {
       filter.orderStatus = "Returned";
       filter.returnStatus = "For Verification";
@@ -120,7 +120,7 @@ const updateOrderStatus = async (req, res) => {
 
     const order = await Order.findById(orderId);
 
-    // Prevent updating status once delivered (except keeping Delivered)
+   
     if (order && order.orderStatus === "Delivered" && status !== "Delivered") {
       return res.status(400).json({
         success: false,
@@ -139,7 +139,7 @@ const updateOrderStatus = async (req, res) => {
 
     if (status === "Delivered") {
       order.deliveredAt = new Date();
-      // For COD orders, mark payment as paid upon delivery
+    
       if (order.paymentMethod === "cod" && order.paymentStatus === "Pending") {
         order.paymentStatus = "Paid";
       }
@@ -147,15 +147,45 @@ const updateOrderStatus = async (req, res) => {
 
     if (status === "Cancelled") {
       order.cancelledAt = new Date();
+
+      // Restore stock for each product size in the cancelled order
+      for (const item of order.items) {
+        try {
+          const product = await Product.findById(item.product);
+          if (!product) {
+            console.error(`Product not found while cancelling order: ${item.product}`);
+            continue;
+          }
+
+          const sizeIndex = product.sizes.findIndex((s) => s.size === item.size);
+          if (sizeIndex !== -1) {
+            product.sizes[sizeIndex].quantity += item.quantity;
+
+            // If previously out of stock, re-evaluate
+            if (product.status === "Out of stock") {
+              const hasAvailableStock = product.sizes.some((s) => s.quantity > 0);
+              if (hasAvailableStock) {
+                product.status = "Available";
+              }
+            }
+
+            await product.save();
+          } else {
+            console.error(`Size ${item.size} not found for product ${product.productName}`);
+          }
+        } catch (err) {
+          console.error(`Error restoring stock for product ${item.product}:`, err);
+        }
+      }
     }
 
-    // Handle refund to wallet if status is changed to 'Refunded'
+  
     if (status === "Refunded" && order.paymentStatus !== "Refunded") {
       try {
-        // Update payment status to Refunded
+        
         order.paymentStatus = "Refunded";
 
-        // Find the user
+     
         const user = await User.findById(order.user);
         if (!user) {
           throw new Error("User not found");

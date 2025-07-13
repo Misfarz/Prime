@@ -56,6 +56,15 @@ const cartSchema = new Schema({
     }
 }, { timestamps: true });
 
+// Remove any cart items where the referenced product no longer exists
+cartSchema.pre('validate', function (next) {
+  // `this` refers to the Cart document being validated
+  if (Array.isArray(this.items)) {
+    this.items = this.items.filter((item) => !!item.product);
+  }
+  next();
+});
+
 const Cart = mongoose.model('Cart', cartSchema);
 
 module.exports = Cart;

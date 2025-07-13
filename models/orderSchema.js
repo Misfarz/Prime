@@ -108,7 +108,7 @@ const orderSchema = new Schema({
     },
     orderStatus: {
         type: String,
-        enum: ['Placed', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned', 'Partially Cancelled', 'Partially Returned'],
+        enum: ['Placed', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned', 'Partially Cancelled', 'Partially Returned',"payment pending"],
         default: 'Placed'
     },
     subtotal: {

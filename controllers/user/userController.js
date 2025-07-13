@@ -743,7 +743,7 @@ const sendResetOTP = async (req, res) => {
       });
     }
 
-    console.log("2. Normalized Email:", email);
+    
 
     if (!email) {
       return res.render("forgot-password", {

@@ -149,10 +149,9 @@ const saveProduct = async (req, res) => {
       }
     }
 
-    console.log("isNew value:", isNew);
-    console.log("isFeatured value:", isFeatured);
+  
 
-    // Calculate highest applicable offer (product vs category)
+    
     const highestOffer = Math.max(productOffer ? parseFloat(productOffer) : 0, categoryDoc.categoryOffer || 0);
 
     const productData = {

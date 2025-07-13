@@ -9,12 +9,12 @@ const razorpayInstance = new Razorpay({
 
 /**
  * Create a Razorpay order
- * @param {Object} options { amount, currency, receipt, notes }
- * @returns {Promise<Object>} Razorpay order object
+ * @param {Object} options 
+ * @returns {Promise<Object>}
  */
 const createRazorpayOrder = async ({ amount, currency = 'INR', receipt, notes = {} }) => {
   return await razorpayInstance.orders.create({
-    amount, // amount in paise
+    amount, 
     currency,
     receipt,
     notes,
@@ -37,3 +37,4 @@ module.exports = {
   createRazorpayOrder,
   verifyPaymentSignature,
 };
+

@@ -89,9 +89,7 @@ const addToCart = async (req, res) => {
       cart = await Cart.findById(user.cart);
 
       if (!cart) {
-        console.log(
-          "Cart reference exists but cart not found, creating new cart"
-        );
+      
 
         cart = new Cart({
           user: userId,
@@ -103,7 +101,7 @@ const addToCart = async (req, res) => {
 
         user.cart = cart._id;
         await user.save();
-        console.log("User updated with new cart reference");
+       
       } else {
         console.log("no existing cart found");
       }

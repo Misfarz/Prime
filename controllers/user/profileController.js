@@ -47,7 +47,11 @@ const loadProfile = async (req, res) => {
     } else if (activeTab === "orders") {
       searchQuery = req.query.search || "";
 
-      let filter = { user: user._id };
+      let filter = { 
+        user: user._id,
+        orderStatus: { $nin: ['Returned', 'Cancelled'] },
+        paymentMethod: 'razorpay'
+      };
 
       // Add search functionality
       if (searchQuery) {
@@ -63,20 +67,25 @@ const loadProfile = async (req, res) => {
 
       orders = await Order.find(filter)
         .sort({ createdAt: -1 })
+        .populate('items.product')
+        .select('+paymentMethod +paymentStatus +orderStatus')
         .skip(skip)
         .limit(limit);
 
       const totalOrders = await Order.countDocuments(filter);
       totalPages = Math.ceil(totalOrders / limit);
 
-      return res.render("profile", {
+      return res.render("orders", {
         user: userData,
-        addresses,
-        activeTab,
         orders,
         currentPage,
         totalPages,
         searchQuery,
+        activeTab: "orders",
+        addresses: userData.addresses || [],
+        wallet: userData.wallet || 0,
+        referalCode: userData.referalCode,
+        redeemedUsers: userData.redeemedUsers || []
       });
     } else if (activeTab === "wallet") {
       // Handle wallet tab

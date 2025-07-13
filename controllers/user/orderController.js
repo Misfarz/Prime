@@ -37,8 +37,19 @@ const loadOrders = async (req, res, next) => {
 
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .populate('items.product')
+      .populate('coupon')
+      .select('+paymentMethod +paymentStatus +orderStatus')
+      .lean() // Convert to plain JavaScript object
+      .exec();
+
+    // Ensure all orders have required fields
+    orders = orders.map(order => ({
+      ...order,
+      paymentMethod: order.paymentMethod || 'razorpay',
+      paymentStatus: order.paymentStatus || 'Pending',
+      orderStatus: order.orderStatus || 'payment pending'
+    }));
 
     const totalOrders = await Order.countDocuments(filter);
     const totalPages = Math.ceil(totalOrders / limit);
@@ -74,8 +85,9 @@ const loadOrderDetails = async (req, res) => {
       select: "productName productImage regularPrice salePrice stock",
     });
 
-    if (!order) {
-      return res.redirect("/profile?tab=orders");
+    if (!order || order.paymentStatus === "Failed") {
+      // Do not allow viewing details of failed payment orders
+      return res.redirect("/orders");
     }
 
     res.render("order-details", {
@@ -127,25 +139,47 @@ const cancelOrder = async (req, res) => {
       item.cancelReason = cancelReason || "No reason provided";
     });
 
+    // Restore stock for each product size that was reserved in the order
     for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity },
-      });
+      try {
+        const product = await Product.findById(item.product);
+        if (!product) {
+          console.error(`Product not found while cancelling order: ${item.product}`);
+          continue;
+        }
+
+        const sizeIndex = product.sizes.findIndex((s) => s.size === item.size);
+        if (sizeIndex !== -1) {
+          product.sizes[sizeIndex].quantity += item.quantity;
+
+          // If the product status was previously marked as out of stock, re-evaluate
+          if (product.status === "Out of stock") {
+            const hasAvailableStock = product.sizes.some((s) => s.quantity > 0);
+            if (hasAvailableStock) {
+              product.status = "Available";
+            }
+          }
+
+          await product.save();
+        } else {
+          console.error(`Size ${item.size} not found for product ${product.productName}`);
+        }
+      } catch (err) {
+        console.error(`Error restoring stock for product ${item.product}:`, err);
+      }
     }
 
     if (order.paymentStatus === "Paid" || order.paymentMethod === "wallet") {
       try {
-        // Add the refunded amount to the user's wallet
+        
         const user = await User.findById(userId);
         if (!user) {
           throw new Error(`User not found for refund: ${userId}`);
         }
 
-        console.log(
-          `Processing refund for cancelled order ${order._id}. Current wallet: ${user.wallet}, Order total: ${order.total}`
-        );
+      
 
-        // Update user wallet balance with proper type conversion
+
         const currentWallet = Number(user.wallet || 0);
         const refundAmount = Number(order.total);
 
@@ -155,7 +189,7 @@ const cancelOrder = async (req, res) => {
           );
         }
 
-        // Update user wallet balance
+       
         user.wallet = currentWallet + refundAmount;
         const savedUser = await user.save();
 
@@ -163,11 +197,8 @@ const cancelOrder = async (req, res) => {
           throw new Error("Failed to save user after wallet update");
         }
 
-        console.log(
-          `Updated user wallet. Previous: ${currentWallet}, Added: ${refundAmount}, New: ${savedUser.wallet}`
-        );
 
-        // Create wallet transaction record
+   
         const walletTransaction = await WalletTransaction.create({
           user: userId,
           amount: refundAmount,
@@ -181,7 +212,7 @@ const cancelOrder = async (req, res) => {
           throw new Error("Failed to create wallet transaction");
         }
 
-        console.log(`Created wallet transaction: ${walletTransaction._id}`);
+       
 
         // Send notification about the wallet transaction
         await sendWalletNotification(
@@ -191,26 +222,19 @@ const cancelOrder = async (req, res) => {
           `Refund for cancelled order #${order.orderNumber}`
         );
 
-        console.log(
-          `Refunded ${refundAmount} to user wallet for cancelled order ${order._id}`
-        );
-
+   
         // Update order payment status
         order.paymentStatus = "Refunded";
         // Save order immediately after updating payment status
         await order.save();
-        console.log(
-          `Updated order payment status to Refunded and saved order ${order._id}`
-        );
+     
       } catch (error) {
         console.error(`Error processing refund for order ${order._id}:`, error);
         // Continue with order cancellation even if refund fails
         // Still update payment status even if refund fails
         order.paymentStatus = "Refunded";
         await order.save();
-        console.log(
-          `Updated order payment status to Refunded despite refund error for order ${order._id}`
-        );
+    
       }
     }
 
@@ -226,6 +250,43 @@ const cancelOrder = async (req, res) => {
       success: false,
       message: "Failed to cancel order",
     });
+  }
+};
+
+const retryPayment = async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.redirect("/login");
+    }
+
+    const userId = req.session.user._id;
+    const orderId = req.params.orderId;
+
+    const order = await Order.findOne({ _id: orderId, user: userId });
+
+    if (!order || order.paymentMethod !== "razorpay" || order.paymentStatus === "Paid") {
+      return res.redirect("/orders");
+    }
+
+    // Create a fresh Razorpay order for retry
+    const { createRazorpayOrder } = require("../../utils/razorpay");
+    const receiptId = `retry_${order.orderNumber}_${Date.now()}`;
+    const rzpOrder = await createRazorpayOrder({
+      amount: Math.round(order.total * 100),
+      currency: "INR",
+      receipt: receiptId,
+      notes: { orderId: order._id.toString(), retry: true },
+    });
+
+    // Store identifiers in session for verification step
+    req.session.retryOrderId = order._id;
+    req.session.retryRzpOrderId = rzpOrder.id;
+
+    // Redirect to payment failure page with order data
+    return res.redirect(`/paymentFailure?orderId=${orderId}&amount=${order.total}&razorpay_order_id=${rzpOrder.id}`);
+  } catch (error) {
+    console.error("Error initiating retry payment:", error);
+    return res.redirect("/orders");
   }
 };
 
@@ -467,6 +528,7 @@ module.exports = {
   loadOrders,
   loadOrderDetails,
   cancelOrder,
+  retryPayment,
   returnOrder,
   generateInvoice,
 };

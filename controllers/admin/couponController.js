@@ -1,12 +1,12 @@
 const Coupon = require("../../models/couponSchema");
-// Load coupons with pagination (limit 3 per page)
+
 const loadCoupons = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = 3;
     const skip = (page - 1) * limit;
 
-    // Fetch paginated coupons and total count
+    
     const [total, coupons] = await Promise.all([
       Coupon.countDocuments(),
       Coupon.find()
@@ -15,7 +15,7 @@ const loadCoupons = async (req, res) => {
         .limit(limit),
     ]);
 
-    // Map usage count accurately
+  
     const couponsWithAccurateCount = coupons.map((coupon) => {
       const couponObj = coupon.toObject();
       couponObj.usageCount = coupon.userId ? coupon.userId.length : 0;

@@ -17,6 +17,8 @@ const fs = require('fs');
 router.get('/', userController.loadHomepage);
 router.get('/login', userController.loadLogin);
 
+
+router.get('/home',userController.loadHomepage)
 router.get('/signup', userController.loadSignUp);
 router.get('/verifyOTP', userController.loadVerifyOTP); 
 router.get('/pageNotFound', userController.loadPageNotFound);
@@ -55,6 +57,7 @@ router.post('/coupons/remove', userAuth, couponController.removeCoupon);
 router.get('/orders', userAuth, orderController.loadOrders);
 router.get('/orders/:orderId', userAuth, orderController.loadOrderDetails);
 router.post('/orders/:orderId/cancel', userAuth, orderController.cancelOrder);
+router.get('/orders/:orderId/retry-payment', userAuth, orderController.retryPayment);
 router.post('/orders/:orderId/return', userAuth, uploadReturnImage, orderController.returnOrder);
 router.get('/orders/:orderId/invoice', userAuth, orderController.generateInvoice);
 

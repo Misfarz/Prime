@@ -42,11 +42,11 @@ exports.saveCategory = async (req, res) => {
   try {
     let { categoryId, name, description, subcategories, categoryOffer } =
       req.body;
-    // Treat blank id as null to prevent ObjectId casting errors
+
     if (categoryId === "") {
       categoryId = null;
     }
-    // Normalize and validate the category name early to avoid duplicate-key errors later
+    
     if (typeof name === "string") {
       name = name.trim();
     }

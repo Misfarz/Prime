@@ -113,7 +113,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
       <% if (categories && categories.length > 0) { %>
         <% categories.forEach(category => { %>
-          <a href="/<%= category.name %>" class="category-card group relative overflow-hidden h-80 rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+          <a href="/shopall?category=<%= category._id %>" class="category-card group relative overflow-hidden h-80 rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
             <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 z-10"></div>
             <img src="<%= category.image %>" 
                  alt="<%= category.name %>" 

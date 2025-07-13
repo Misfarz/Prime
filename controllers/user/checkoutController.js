@@ -294,9 +294,7 @@ const placeOrder = async (req, res) => {
           coupon.usageCount += 1;
         }
         await coupon.save();
-        console.log(
-          `Permanently recorded coupon usage for user ${userId} and coupon ${coupon.name}. Usage count: ${coupon.usageCount}`
-        );
+    
       }
     }
 
@@ -336,9 +334,7 @@ const placeOrder = async (req, res) => {
 
           await product.save();
 
-          console.log(
-            `Updated stock for ${product.productName}, size ${size}: ${product.sizes[sizeIndex].quantity}`
-          );
+       
         } else {
           console.error(
             `Size ${size} not found for product ${product.productName}`

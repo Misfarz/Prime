@@ -228,21 +228,25 @@ const choosePayment = async (req, res) => {
       const receiptId = `rcpt_${Date.now()}`;
       const rzpOrder = await createRazorpayOrder({ amount: Math.round(finalAmount * 100), currency: 'INR', receipt: receiptId, notes: { userId } });
 
-      // Temporarily store order data in session
-      req.session.pendingRazorpayOrder = {
+      // Create order document with initial status
+      const order = new Order({
         user: userId,
         items: orderItems,
         shippingAddress: selectedAddressDoc,
         paymentMethod: 'razorpay',
         paymentStatus: 'Pending',
-        orderStatus: 'Placed',
+        orderStatus: 'payment pending',
         subtotal,
         shipping,
         tax,
         discount: couponDiscount,
         couponCode: cart.coupon?.code || '',
         total: finalAmount,
-      };
+      });
+      await order.save();
+      
+      // Store order ID in session for verification
+      req.session.pendingRazorpayOrder = order._id;
       req.session.rzpOrderId = rzpOrder.id;
 
       return res.json({
@@ -278,33 +282,93 @@ const verifyRazorpayPayment = async (req, res) => {
     const isValid = verifyPaymentSignature({ order_id: razorpay_order_id, payment_id: razorpay_payment_id, signature: razorpay_signature });
     if (!isValid) return res.status(400).json({ success: false, message: 'Invalid signature' });
 
-    if (!req.session.pendingRazorpayOrder || req.session.rzpOrderId !== razorpay_order_id) {
+    // Handle fresh checkout payment
+    if (req.session.pendingRazorpayOrder && req.session.rzpOrderId === razorpay_order_id) {
+      const orderId = req.session.pendingRazorpayOrder;
+      const order = await Order.findById(orderId);
+      
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+      try {
+        // Verify the payment
+        const isValid = verifyPaymentSignature({ order_id: razorpay_order_id, payment_id: razorpay_payment_id, signature: razorpay_signature });
+        if (!isValid) {
+          // If verification fails, mark order as Failed
+          order.paymentStatus = 'Failed';
+          order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature };
+          order.orderStatus = 'Cancelled';
+          await order.save();
+          return res.status(400).json({ success: false, message: 'Payment verification failed', orderId: order._id });
+        }
+
+        // If verification succeeds, update to Paid and Placed
+        order.paymentStatus = 'Paid';
+        order.orderStatus = 'Placed';
+        order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature };
+        await order.save();
+
+        // Stock adjustment and cart clearing
+        await Promise.all([
+          ...order.items.map((it) => Product.findByIdAndUpdate(it.product, { $inc: { 'sizes.$[elem].quantity': -it.quantity } }, { arrayFilters: [{ 'elem.size': it.size }] })),
+          Cart.deleteOne({ user: order.user }),
+        ]);
+
+        delete req.session.pendingRazorpayOrder;
+        delete req.session.rzpOrderId;
+
+        return res.json({ success: true, orderId: order._id });
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        // If any error occurs, mark order as Failed
+        order.paymentStatus = 'Failed';
+        order.orderStatus = 'Payment Failed';
+        order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature, error: error.message };
+        await order.save();
+        return res.status(500).json({ success: false, message: 'Payment processing failed', orderId: order._id });
+      }
+    }
+    // Handle retry payment
+    else if (req.session.retryOrderId && req.session.retryRzpOrderId === razorpay_order_id) {
+      const order = await Order.findById(req.session.retryOrderId);
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+      try {
+        // Verify the payment
+        const isValid = verifyPaymentSignature({ order_id: razorpay_order_id, payment_id: razorpay_payment_id, signature: razorpay_signature });
+        if (!isValid) {
+          // If verification fails, keep as Failed
+          order.paymentStatus = 'Failed';
+          order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature };
+          await order.save();
+          return res.status(400).json({ success: false, message: 'Payment verification failed', orderId: order._id });
+        }
+
+        // If verification succeeds, update to Paid and Placed
+        order.paymentStatus = 'Paid';
+        order.orderStatus = 'Placed';
+        order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature };
+        await order.save();
+
+        delete req.session.retryOrderId;
+        delete req.session.retryRzpOrderId;
+
+        return res.json({ success: true, orderId: order._id });
+      } catch (error) {
+        console.error('Retry payment verification error:', error);
+        // If any error occurs, mark order as Failed
+        order.paymentStatus = 'Failed';
+        order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature, error: error.message };
+        await order.save();
+        return res.status(500).json({ success: false, message: 'Payment processing failed', orderId: order._id });
+      }
+    } else {
       return res.status(404).json({ success: false, message: 'Order session expired' });
     }
-
-    const orderData = req.session.pendingRazorpayOrder;
-    orderData.paymentStatus = 'Paid';
-    orderData.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature };
-
-    const order = new Order(orderData);
-    await order.save();
-
-    // adjust stock & clear cart
-    await Promise.all([
-      ...order.items.map((it) => Product.findByIdAndUpdate(it.product, { $inc: { 'sizes.$[elem].quantity': -it.quantity } }, { arrayFilters: [{ 'elem.size': it.size }] })),
-      Cart.deleteOne({ user: order.user }),
-    ]);
-
-    // cleanup session
-    delete req.session.pendingRazorpayOrder;
-    delete req.session.rzpOrderId;
-
-    return res.json({ success: true, orderId: order._id });
   } catch (err) {
     console.error('verifyPayment error:', err);
     return res.status(500).json({ success: false, message: 'Payment verification failed' });
   }
-};
+}
 
 const paymentFailure = async (req, res) => {
   const errorMessage = req.query.error || 'Payment failed';

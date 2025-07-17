@@ -35,13 +35,15 @@ const loadOrders = async (req, res, next) => {
     const limit = 10;
     const skip = (page - 1) * limit;
 
-    const orders = await Order.find(filter)
+    // Apply pagination with skip & limit
+    let orders = await Order.find(filter)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate('items.product')
       .populate('coupon')
       .select('+paymentMethod +paymentStatus +orderStatus')
-      .lean() // Convert to plain JavaScript object
-      .exec();
+      .lean();
 
     // Ensure all orders have required fields
     orders = orders.map(order => ({
@@ -61,6 +63,7 @@ const loadOrders = async (req, res, next) => {
       totalPages,
       searchQuery,
       activeTab: "orders",
+      baseUrl: "/orders",
     });
   } catch (error) {
     // Forward error to the global error handler

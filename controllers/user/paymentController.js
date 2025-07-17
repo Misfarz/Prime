@@ -228,8 +228,20 @@ const choosePayment = async (req, res) => {
       const receiptId = `rcpt_${Date.now()}`;
       const rzpOrder = await createRazorpayOrder({ amount: Math.round(finalAmount * 100), currency: 'INR', receipt: receiptId, notes: { userId } });
 
-      // Create order document with initial status
-      const order = new Order({
+      // Re-use any existing pending Razorpay order for this user to prevent duplicates
+      let order = await Order.findOne({ user: userId, paymentMethod: 'razorpay', paymentStatus: 'Pending', orderStatus: 'payment pending' });
+      if (order) {
+        // Refresh the order details (items/amount) in case cart changed
+        order.items = orderItems;
+        order.subtotal = subtotal;
+        order.shipping = shipping;
+        order.tax = tax;
+        order.discount = couponDiscount;
+        order.total = finalAmount;
+        await order.save();
+      } else {
+        // Create new order document with initial status
+        order = new Order({
         user: userId,
         items: orderItems,
         shippingAddress: selectedAddressDoc,
@@ -244,27 +256,28 @@ const choosePayment = async (req, res) => {
         total: finalAmount,
       });
       await order.save();
-      
-      // Store order ID in session for verification
-      req.session.pendingRazorpayOrder = order._id;
-      req.session.rzpOrderId = rzpOrder.id;
+    }
 
-      return res.json({
-        success: true,
-        razorpay: {
-          key: process.env.RAZORPAY_KEY_ID,
-          order_id: rzpOrder.id,
-          amount: rzpOrder.amount,
-          currency: rzpOrder.currency,
-          name: 'Prime',
-          description: 'Order Payment',
-          prefill: {
-            name: user.name,
-            email: user.email,
-            contact: user.phone || '',
-          },
+    // Store order ID in session for verification
+    req.session.pendingRazorpayOrder = order._id;
+    req.session.rzpOrderId = rzpOrder.id;
+
+    return res.json({
+      success: true,
+      razorpay: {
+        key: process.env.RAZORPAY_KEY_ID,
+        order_id: rzpOrder.id,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency,
+        name: 'Prime',
+        description: 'Order Payment',
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone || '',
         },
-      });
+      }
+    });
     }
   } catch (err) {
     console.error('choosePayment error:', err);
@@ -347,6 +360,19 @@ const verifyRazorpayPayment = async (req, res) => {
         order.paymentStatus = 'Paid';
         order.orderStatus = 'Placed';
         order.paymentDetails = { razorpay_payment_id, razorpay_order_id, razorpay_signature };
+
+        // Adjust product stock for each item and clear user's cart (same as fresh payment success)
+        await Promise.all([
+          ...order.items.map((it) =>
+            Product.findByIdAndUpdate(
+              it.product,
+              { $inc: { 'sizes.$[elem].quantity': -it.quantity } },
+              { arrayFilters: [{ 'elem.size': it.size }] }
+            )
+          ),
+          Cart.deleteOne({ user: order.user }),
+        ]);
+
         await order.save();
 
         delete req.session.retryOrderId;

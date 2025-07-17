@@ -250,9 +250,9 @@ const loadShopAll = async (req, res) => {
         : { min: 0, max: 1000 };
 
     let searchMessage = "";
-    if (search && products.length === 0) {
+    if (search && newProducts.length === 0) {
       searchMessage = `No products found matching "${search}". Try a different search term.`;
-    } else if (search && products.length > 0) {
+    } else if (search && newProducts.length > 0) {
       searchMessage = `Showing results for "${search}"`;
     }
 
@@ -1412,9 +1412,9 @@ const loadNewArrivals= async (req,res,next) =>  {
         : { min: 0, max: 1000 };
 
     let searchMessage = "";
-    if (search && products.length === 0) {
+    if (search && newProducts.length === 0) {
       searchMessage = `No products found matching "${search}". Try a different search term.`;
-    } else if (search && products.length > 0) {
+    } else if (search && newProducts.length > 0) {
       searchMessage = `Showing results for "${search}"`;
     }
 

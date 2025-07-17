@@ -335,16 +335,16 @@
       </div>
 
       <% if (typeof searchMessage !== 'undefined' && searchMessage) { %>
-        <div class="mb-8 <%= products.length === 0 ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700' %> p-4 rounded-md shadow-sm border <%= products.length === 0 ? 'border-red-100' : 'border-blue-100' %>">
+        <div class="mb-8 <%= newProducts.length === 0 ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700' %> p-4 rounded-md shadow-sm border <%= newProducts.length === 0 ? 'border-red-100' : 'border-blue-100' %>">
           <div class="flex items-center">
-            <% if (products.length === 0) { %>
+            <% if (newProducts.length === 0) { %>
               <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
             <% } else { %>
               <i class="fas fa-info-circle text-blue-500 mr-3"></i>
             <% } %>
             <p class="font-medium text-sm"><%= searchMessage %></p>
           </div>
-          <% if (products.length === 0) { %>
+          <% if (newProducts.length === 0) { %>
             <div class="mt-2 ml-7">
               <a href="/newarrivals" class="text-red-700 underline text-sm hover:text-red-800 transition">View all products</a>
             </div>

@@ -35,7 +35,12 @@ const loadProfile = async (req, res) => {
     }
     const addresses = userData.addresses || [];
 
-    const activeTab = req.query.tab || "details";
+    let activeTab = req.query.tab || "details";
+
+    // If a search query is present but no specific tab is selected, default to the orders tab
+    if (req.query.search && !req.query.tab) {
+      activeTab = "orders";
+    }
 
     let orders = [];
     let walletTransactions = [];
@@ -75,6 +80,7 @@ const loadProfile = async (req, res) => {
       const totalOrders = await Order.countDocuments(filter);
       totalPages = Math.ceil(totalOrders / limit);
 
+      const baseUrl = `/profile?tab=orders`;
       return res.render("orders", {
         user: userData,
         orders,
@@ -85,7 +91,8 @@ const loadProfile = async (req, res) => {
         addresses: userData.addresses || [],
         wallet: userData.wallet || 0,
         referalCode: userData.referalCode,
-        redeemedUsers: userData.redeemedUsers || []
+        redeemedUsers: userData.redeemedUsers || [],
+        baseUrl,
       });
     } else if (activeTab === "wallet") {
       // Handle wallet tab
